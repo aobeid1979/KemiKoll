@@ -1,0 +1,36 @@
+<Project>
+  <!--
+    Shared build settings for every project in the KemiKoll solution.
+    MSBuild imports this file automatically into each .csproj below this folder,
+    so the rules are defined once and apply everywhere.
+  -->
+
+  <!-- Common project settings -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <!-- Quality rules: code with warnings does not build. -->
+  <PropertyGroup>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- .NET code analyzers with Microsoft's recommended rule set. -->
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <!-- Also check the code-style rules from .editorconfig during the build. -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+  <!--
+    XML documentation: every public type and member needs a /// comment
+    (otherwise warning CS1591, which fails the build).
+  -->
+  <PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <!-- Test projects and the Blazor UI are exempt from the XML documentation rule. -->
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests')) Or '$(MSBuildProjectName)' == 'KemiKoll.Web'">
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+</Project>
