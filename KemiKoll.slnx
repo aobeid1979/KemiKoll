@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/KemiKoll.Application/KemiKoll.Application.csproj" />
+    <Project Path="src/KemiKoll.Domain/KemiKoll.Domain.csproj" />
+    <Project Path="src/KemiKoll.Infrastructure/KemiKoll.Infrastructure.csproj" />
+    <Project Path="src/KemiKoll.Web/KemiKoll.Web.csproj" />
+  </Folder>
+</Solution>
