@@ -1,0 +1,47 @@
+# Continuous Integration for KemiKoll.
+# Runs on every pull request to main and on every push to main.
+# A pull request should only be merged when all steps are green.
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# The workflow only needs to read the code.
+permissions:
+  contents: read
+
+# If a new commit is pushed to the same PR, cancel the older run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v7
+
+      - name: Install .NET SDK (version from global.json)
+        uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Restore NuGet packages
+        run: dotnet restore KemiKoll.slnx
+
+      # Fails if any file does not follow .editorconfig.
+      # Fix locally with: dotnet format KemiKoll.slnx
+      - name: Check formatting
+        run: dotnet format KemiKoll.slnx --verify-no-changes --no-restore
+
+      - name: Build
+        run: dotnet build KemiKoll.slnx --configuration Release --no-restore
+
+      - name: Run tests
+        run: dotnet test KemiKoll.slnx --configuration Release --no-build --verbosity normal
