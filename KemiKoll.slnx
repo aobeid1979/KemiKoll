@@ -5,4 +5,8 @@
     <Project Path="src/KemiKoll.Infrastructure/KemiKoll.Infrastructure.csproj" />
     <Project Path="src/KemiKoll.Web/KemiKoll.Web.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/KemiKoll.Application.Tests/KemiKoll.Application.Tests.csproj" />
+    <Project Path="tests/KemiKoll.Domain.Tests/KemiKoll.Domain.Tests.csproj" />
+  </Folder>
 </Solution>
