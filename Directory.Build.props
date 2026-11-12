@@ -29,8 +29,18 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
-  <!-- Test projects and the Blazor UI are exempt from the XML documentation rule. -->
-  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests')) Or '$(MSBuildProjectName)' == 'KemiKoll.Web'">
+  <!-- The Blazor UI is exempt from the XML documentation rule. -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'KemiKoll.Web'">
     <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <!--
+    Test projects:
+    - CS1591: test classes do not need XML comments.
+    - CA1707: underscores are the standard naming style for test methods
+      (Method_Condition_ExpectedResult), so this rule is turned off here.
+  -->
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
+    <NoWarn>$(NoWarn);CS1591;CA1707</NoWarn>
   </PropertyGroup>
 </Project>
