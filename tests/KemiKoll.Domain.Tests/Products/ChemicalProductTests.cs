@@ -157,4 +157,63 @@ public class ChemicalProductTests
 
         Assert.Throws<ArgumentNullException>(() => product.AddHazardStatement(null!));
     }
+
+    [Fact]
+    public void AddPictogram_New_ReturnsTrueAndMakesProductHazardous()
+    {
+        var product = ChemicalProduct.Create("Solvent", "Supplier");
+
+        Assert.True(product.AddPictogram(Pictogram.Flammable));
+        Assert.Equal(new[] { Pictogram.Flammable }, product.Pictograms);
+        Assert.True(product.IsHazardous);
+    }
+
+    [Fact]
+    public void AddPictogram_Twice_ReturnsFalseAndKeepsOne()
+    {
+        var product = ChemicalProduct.Create("Solvent", "Supplier");
+        product.AddPictogram(Pictogram.Corrosive);
+
+        Assert.False(product.AddPictogram(Pictogram.Corrosive));
+        Assert.Single(product.Pictograms);
+    }
+
+    [Fact]
+    public void AddPictogram_KeepsOrder()
+    {
+        var product = ChemicalProduct.Create("Solvent", "Supplier");
+
+        product.AddPictogram(Pictogram.Environment);
+        product.AddPictogram(Pictogram.Flammable);
+
+        Assert.Equal(new[] { Pictogram.Environment, Pictogram.Flammable }, product.Pictograms);
+    }
+
+    [Fact]
+    public void AddPictogram_UndefinedValue_Throws()
+    {
+        var product = ChemicalProduct.Create("Solvent", "Supplier");
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => product.AddPictogram((Pictogram)42));
+        Assert.Empty(product.Pictograms);
+    }
+
+    [Fact]
+    public void RemovePictogram_Existing_ReturnsTrueAndProductIsNoLongerHazardous()
+    {
+        var product = ChemicalProduct.Create("Solvent", "Supplier");
+        product.AddPictogram(Pictogram.HealthHazardLow);
+
+        Assert.True(product.RemovePictogram(Pictogram.HealthHazardLow));
+        Assert.Empty(product.Pictograms);
+        Assert.False(product.IsHazardous);
+    }
+
+    [Fact]
+    public void RemovePictogram_Missing_ReturnsFalse()
+    {
+        var product = ChemicalProduct.Create("Solvent", "Supplier");
+
+        Assert.False(product.RemovePictogram(Pictogram.Explosive));
+    }
 }
