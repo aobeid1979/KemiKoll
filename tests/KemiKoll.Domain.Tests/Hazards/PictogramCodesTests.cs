@@ -5,14 +5,14 @@ namespace KemiKoll.Domain.Tests.Hazards;
 public class PictogramCodesTests
 {
     [Theory]
-    [InlineData(Pictogram.Explosive, "GHS01")]
-    [InlineData(Pictogram.Flammable, "GHS02")]
-    [InlineData(Pictogram.Oxidising, "GHS03")]
-    [InlineData(Pictogram.GasUnderPressure, "GHS04")]
-    [InlineData(Pictogram.Corrosive, "GHS05")]
-    [InlineData(Pictogram.AcuteToxicity, "GHS06")]
-    [InlineData(Pictogram.HealthHazardLow, "GHS07")]
-    [InlineData(Pictogram.SeriousHealthHazard, "GHS08")]
+    [InlineData(Pictogram.ExplodingBomb, "GHS01")]
+    [InlineData(Pictogram.Flame, "GHS02")]
+    [InlineData(Pictogram.FlameOverCircle, "GHS03")]
+    [InlineData(Pictogram.GasCylinder, "GHS04")]
+    [InlineData(Pictogram.Corrosion, "GHS05")]
+    [InlineData(Pictogram.SkullAndCrossbones, "GHS06")]
+    [InlineData(Pictogram.ExclamationMark, "GHS07")]
+    [InlineData(Pictogram.HealthHazard, "GHS08")]
     [InlineData(Pictogram.Environment, "GHS09")]
     public void ToCode_And_Parse_MatchOfficialCodes(Pictogram pictogram, string code)
     {
@@ -33,7 +33,7 @@ public class PictogramCodesTests
     public void TryParse_IgnoresCaseAndSurroundingSpaces(string code)
     {
         Assert.True(PictogramCodes.TryParse(code, out var pictogram));
-        Assert.Equal(Pictogram.Flammable, pictogram);
+        Assert.Equal(Pictogram.Flame, pictogram);
     }
 
     [Theory]

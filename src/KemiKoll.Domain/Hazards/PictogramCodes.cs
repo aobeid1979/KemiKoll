@@ -10,7 +10,7 @@ public static class PictogramCodes
 {
     private const string Prefix = "GHS";
 
-    /// <summary>Returns the official code, for example <c>GHS02</c> for <see cref="Pictogram.Flammable"/>.</summary>
+    /// <summary>Returns the official code, for example <c>GHS02</c> for <see cref="Pictogram.Flame"/>.</summary>
     /// <param name="pictogram">A defined pictogram.</param>
     /// <returns>The code in the format <c>GHS0n</c>.</returns>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="pictogram"/> is not one of the nine defined values.</exception>
