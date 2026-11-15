@@ -157,4 +157,63 @@ public class ChemicalProductTests
 
         Assert.Throws<ArgumentNullException>(() => product.AddHazardStatement(null!));
     }
+
+    [Fact]
+    public void AddPictogram_New_ReturnsTrueAndMakesProductHazardous()
+    {
+        var product = ChemicalProduct.Create("Solvent", "Supplier");
+
+        Assert.True(product.AddPictogram(Pictogram.Flame));
+        Assert.Equal(new[] { Pictogram.Flame }, product.Pictograms);
+        Assert.True(product.IsHazardous);
+    }
+
+    [Fact]
+    public void AddPictogram_Twice_ReturnsFalseAndKeepsOne()
+    {
+        var product = ChemicalProduct.Create("Solvent", "Supplier");
+        product.AddPictogram(Pictogram.Corrosion);
+
+        Assert.False(product.AddPictogram(Pictogram.Corrosion));
+        Assert.Single(product.Pictograms);
+    }
+
+    [Fact]
+    public void AddPictogram_KeepsOrder()
+    {
+        var product = ChemicalProduct.Create("Solvent", "Supplier");
+
+        product.AddPictogram(Pictogram.Environment);
+        product.AddPictogram(Pictogram.Flame);
+
+        Assert.Equal(new[] { Pictogram.Environment, Pictogram.Flame }, product.Pictograms);
+    }
+
+    [Fact]
+    public void AddPictogram_UndefinedValue_Throws()
+    {
+        var product = ChemicalProduct.Create("Solvent", "Supplier");
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => product.AddPictogram((Pictogram)42));
+        Assert.Empty(product.Pictograms);
+    }
+
+    [Fact]
+    public void RemovePictogram_Existing_ReturnsTrueAndProductIsNoLongerHazardous()
+    {
+        var product = ChemicalProduct.Create("Solvent", "Supplier");
+        product.AddPictogram(Pictogram.ExclamationMark);
+
+        Assert.True(product.RemovePictogram(Pictogram.ExclamationMark));
+        Assert.Empty(product.Pictograms);
+        Assert.False(product.IsHazardous);
+    }
+
+    [Fact]
+    public void RemovePictogram_Missing_ReturnsFalse()
+    {
+        var product = ChemicalProduct.Create("Solvent", "Supplier");
+
+        Assert.False(product.RemovePictogram(Pictogram.ExplodingBomb));
+    }
 }
