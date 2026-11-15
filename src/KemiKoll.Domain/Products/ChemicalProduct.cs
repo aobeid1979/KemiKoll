@@ -20,6 +20,9 @@ public sealed class ChemicalProduct
     // duplicates are prevented in AddHazardStatement.
     private readonly List<HazardStatement> _hazardStatements = [];
 
+    // Same approach for pictograms: order kept, duplicates prevented in AddPictogram.
+    private readonly List<Pictogram> _pictograms = [];
+
     private ChemicalProduct(Guid id, string name, string supplier)
     {
         Id = id;
@@ -39,11 +42,14 @@ public sealed class ChemicalProduct
     /// <summary>The hazard statements (H-phrases) of the product, in the order they were added.</summary>
     public IReadOnlyList<HazardStatement> HazardStatements => _hazardStatements;
 
+    /// <summary>The GHS hazard pictograms of the product, in the order they were added.</summary>
+    public IReadOnlyList<Pictogram> Pictograms => _pictograms;
+
     /// <summary>
-    /// <see langword="true"/> if the product has at least one hazard statement.
+    /// <see langword="true"/> if the product has at least one hazard statement or pictogram.
     /// Hazardous products need a safety data sheet and a risk assessment.
     /// </summary>
-    public bool IsHazardous => _hazardStatements.Count > 0;
+    public bool IsHazardous => _hazardStatements.Count > 0 || _pictograms.Count > 0;
 
     /// <summary>
     /// Creates a new chemical product.
@@ -108,6 +114,28 @@ public sealed class ChemicalProduct
         ArgumentNullException.ThrowIfNull(statement);
         return _hazardStatements.Remove(statement);
     }
+
+    /// <summary>Adds a GHS pictogram unless the product already has it.</summary>
+    /// <param name="pictogram">The pictogram to add.</param>
+    /// <returns><see langword="true"/> if it was added; <see langword="false"/> if it was already there.</returns>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="pictogram"/> is not a defined GHS pictogram.</exception>
+    public bool AddPictogram(Pictogram pictogram)
+    {
+        PictogramCodes.EnsureDefined(pictogram);
+
+        if (_pictograms.Contains(pictogram))
+        {
+            return false;
+        }
+
+        _pictograms.Add(pictogram);
+        return true;
+    }
+
+    /// <summary>Removes a GHS pictogram.</summary>
+    /// <param name="pictogram">The pictogram to remove.</param>
+    /// <returns><see langword="true"/> if it was removed; <see langword="false"/> if the product did not have it.</returns>
+    public bool RemovePictogram(Pictogram pictogram) => _pictograms.Remove(pictogram);
 
     private static string ValidateText(string value, string parameterName)
     {
