@@ -39,15 +39,15 @@ else
                     <td class="name">@product.Name</td>
                     <td>@product.Supplier</td>
                     <td>
-                        @foreach (var code in product.HazardCodes)
+                        @foreach (var hazardCode in product.HazardCodes)
                         {
-                            <span class="code">@code</span>
+                            <span class="code">@hazardCode</span>
                         }
                     </td>
                     <td>
-                        @foreach (var code in product.PictogramCodes)
+                        @foreach (var pictogramCode in product.PictogramCodes)
                         {
-                            <span class="code pictogram">@code</span>
+                            <span class="code pictogram">@pictogramCode</span>
                         }
                     </td>
                     <td>
