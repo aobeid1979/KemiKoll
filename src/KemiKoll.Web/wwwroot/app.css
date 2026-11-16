@@ -1,3 +1,12 @@
+/* Global styles for the whole app. Page-specific styles live in <Page>.razor.css files. */
+
+body {
+    margin: 0;
+    font-family: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+    color: #1d2329;
+    background: #fff;
+}
+
 h1:focus {
     outline: none;
 }

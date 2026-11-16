@@ -18,3 +18,43 @@
         right: 0.75rem;
         top: 0.5rem;
     }
+
+/* Top navigation bar shown on every page. */
+.top-bar {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    padding: 0.75rem 1.5rem;
+    background: #1f4e78;
+    color: #fff;
+}
+
+.brand {
+    color: #fff;
+    font-size: 1.25rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+nav {
+    display: flex;
+    gap: 1.25rem;
+}
+
+/* NavLink renders an <a> inside this component, so ::deep is needed to style it. */
+nav ::deep a {
+    color: #dce6f0;
+    text-decoration: none;
+}
+
+nav ::deep a:hover,
+nav ::deep a.active {
+    color: #fff;
+    text-decoration: underline;
+}
+
+.content {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 1.5rem;
+}

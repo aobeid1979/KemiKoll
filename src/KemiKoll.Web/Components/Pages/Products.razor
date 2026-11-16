@@ -1,0 +1,77 @@
+@page "/products"
+@using KemiKoll.Application.Products
+@inject ListProducts ListProducts
+
+@* The chemical inventory: one row per product. Read-only for now; the "add product" form comes next. *@
+
+<PageTitle>Products – KemiKoll</PageTitle>
+
+<h1>Chemical products</h1>
+
+@if (_products is null)
+{
+    <p>Loading…</p>
+}
+else if (_products.Count == 0)
+{
+    <p class="empty">No products yet.</p>
+}
+else
+{
+    <p class="summary">
+        @_products.Count products, of which <strong>@_products.Count(p => p.IsHazardous) hazardous</strong>.
+    </p>
+
+    <table class="products">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Supplier</th>
+                <th>Hazard statements</th>
+                <th>Pictograms</th>
+                <th>Hazardous</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var product in _products)
+            {
+                <tr @key="product.Id">
+                    <td class="name">@product.Name</td>
+                    <td>@product.Supplier</td>
+                    <td>
+                        @foreach (var hazardCode in product.HazardCodes)
+                        {
+                            <span class="code">@hazardCode</span>
+                        }
+                    </td>
+                    <td>
+                        @foreach (var pictogramCode in product.PictogramCodes)
+                        {
+                            <span class="code pictogram">@pictogramCode</span>
+                        }
+                    </td>
+                    <td>
+                        @if (product.IsHazardous)
+                        {
+                            <span class="badge hazardous">Yes</span>
+                        }
+                        else
+                        {
+                            <span class="badge safe">No</span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    // null = still loading; an empty list = loaded, but there are no products.
+    private IReadOnlyList<ProductSummary>? _products;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _products = await ListProducts.ExecuteAsync();
+    }
+}

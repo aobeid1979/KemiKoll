@@ -1,6 +1,16 @@
 @inherits LayoutComponentBase
 
-@Body
+<header class="top-bar">
+    <a class="brand" href="">KemiKoll</a>
+    <nav>
+        <NavLink href="" Match="NavLinkMatch.All">Home</NavLink>
+        <NavLink href="products">Products</NavLink>
+    </nav>
+</header>
+
+<main class="content">
+    @Body
+</main>
 
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.
