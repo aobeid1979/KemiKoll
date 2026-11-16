@@ -1,0 +1,72 @@
+/* Styles for the product list page only (Blazor scoped CSS). */
+
+.summary {
+    color: #444;
+}
+
+.empty {
+    color: #666;
+    font-style: italic;
+}
+
+.products {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+.products th,
+.products td {
+    text-align: left;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid #e3e3e3;
+    vertical-align: top;
+}
+
+.products th {
+    background: #f4f6f8;
+    font-weight: 600;
+}
+
+.products tbody tr:hover {
+    background: #fafbfc;
+}
+
+.name {
+    font-weight: 600;
+}
+
+/* H-phrase and GHS codes shown as small labels. */
+.code {
+    display: inline-block;
+    margin: 0 0.25rem 0.25rem 0;
+    padding: 0.1rem 0.45rem;
+    border: 1px solid #c9ced4;
+    border-radius: 4px;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.85rem;
+    background: #fff;
+}
+
+.code.pictogram {
+    border-color: #d33;
+    color: #a11;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.badge.hazardous {
+    background: #fde8e8;
+    color: #a11;
+}
+
+.badge.safe {
+    background: #e6f4ea;
+    color: #1e7a34;
+}
