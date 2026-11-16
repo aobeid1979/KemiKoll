@@ -87,7 +87,8 @@ public class CompanyTests
         company.AddWorkplace("Workshop");
         company.AddWorkplace("Chemical cabinet 1");
 
-        Assert.Equal(new[] { "Workshop", "Chemical cabinet 1" }, company.Workplaces.Select(w => w.Name));
+        string[] expected = ["Workshop", "Chemical cabinet 1"];
+        Assert.Equal(expected, company.Workplaces.Select(w => w.Name));
     }
 
     [Theory]
