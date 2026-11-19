@@ -74,7 +74,7 @@ public sealed class AddProduct(IProductRepository repository)
         {
             // The domain rules (required name, max length …) are the single source of truth;
             // their message is passed on to the user.
-            errors.Add(ToUserMessage(exception));
+            errors.Add(UserMessages.From(exception));
         }
 
         if (product is null || errors.Count > 0)
@@ -125,14 +125,5 @@ public sealed class AddProduct(IProductRepository repository)
         }
 
         return pictograms;
-    }
-
-    // ArgumentException.Message ends with " (Parameter 'name')"; turn it into "Name: …" for the user.
-    private static string ToUserMessage(ArgumentException exception)
-    {
-        var parameterName = exception.ParamName ?? "Input";
-        var field = char.ToUpperInvariant(parameterName[0]) + parameterName[1..];
-        var message = exception.Message.Replace($" (Parameter '{exception.ParamName}')", string.Empty, StringComparison.Ordinal);
-        return $"{field}: {message}";
     }
 }
