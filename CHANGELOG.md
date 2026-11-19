@@ -10,6 +10,8 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - README, contributing guide, roadmap, changelog and architecture decision records.
 - GNU AGPL v3 license.
 - Local PostgreSQL 17 database in Docker (`docker-compose.yml`, `.env.example`).
+- EF Core with PostgreSQL: `KemiKollDbContext` and table mappings for products and safety data sheets.
+- `KemiKoll.Infrastructure.Tests` with tests for the database mapping.
 
 ## [0.3.0] - 2026-11-19
 

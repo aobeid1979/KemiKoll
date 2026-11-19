@@ -26,7 +26,7 @@ The order puts something visible on screen early, then makes it real step by ste
 ## ⏭️ v0.4.0 — Database
 Data survives a restart. The screens do not change.
 - [x] Local PostgreSQL database for development (Docker)
-- [ ] EF Core: database context and table mappings for products and data sheets
+- [x] EF Core: database context and table mappings for products and data sheets
 - [ ] Database migrations
 - [ ] Use the database instead of in-memory storage
 
