@@ -70,6 +70,36 @@ dotnet run --project src/KemiKoll.Web
 Open the address shown in the terminal and go to **Products**.
 Tip: `dotnet watch --project src/KemiKoll.Web` restarts automatically when you save a file.
 
+### Local database (PostgreSQL in Docker)
+
+The app does not use the database yet — that comes in v0.4.0. Without a database it keeps
+data in memory, so Docker is optional for now.
+
+Requirements: [Docker Desktop](https://www.docker.com/products/docker-desktop/).
+
+1. Create your local settings file and choose a password in it:
+   ```bash
+   copy .env.example .env      # Windows
+   cp .env.example .env        # macOS / Linux
+   ```
+2. Start the database:
+   ```bash
+   docker compose up -d
+   ```
+3. Check that it is running — the status should be **healthy**:
+   ```bash
+   docker compose ps
+   ```
+
+| Task | Command |
+|------|---------|
+| Stop (data is kept) | `docker compose down` |
+| Start again | `docker compose up -d` |
+| Delete all data | `docker compose down -v` |
+
+The database is only reachable from your own computer (`localhost:5432`).
+`.env` is ignored by Git, so your password is never committed.
+
 ## Contributing
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) for the branch, commit and pull request rules.

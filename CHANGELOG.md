@@ -9,6 +9,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 ### Added
 - README, contributing guide, roadmap, changelog and architecture decision records.
 - GNU AGPL v3 license.
+- Local PostgreSQL 17 database in Docker (`docker-compose.yml`, `.env.example`).
 
 ## [0.3.0] - 2026-11-19
 
