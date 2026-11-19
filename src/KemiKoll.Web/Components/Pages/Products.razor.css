@@ -90,3 +90,26 @@
     background: #e6f4ea;
     color: #1e7a34;
 }
+
+.badge.review {
+    background: #fff1d6;
+    color: #8a5a00;
+}
+
+/* Revision date under a data sheet badge. */
+.revision {
+    display: block;
+    margin-top: 0.2rem;
+    color: #666;
+}
+
+.not-required {
+    color: #888;
+    font-size: 0.85rem;
+}
+
+.attention {
+    margin-left: 0.5rem;
+    color: #8a5a00;
+    font-weight: 600;
+}
