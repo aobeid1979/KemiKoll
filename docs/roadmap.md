@@ -25,9 +25,10 @@ The order puts something visible on screen early, then makes it real step by ste
 
 ## ⏭️ v0.4.0 — Database
 Data survives a restart. The screens do not change.
-- [ ] PostgreSQL with EF Core: products and data sheets
+- [x] Local PostgreSQL database for development (Docker)
+- [ ] EF Core: database context and table mappings for products and data sheets
 - [ ] Database migrations
-- [ ] Local database for development (Docker)
+- [ ] Use the database instead of in-memory storage
 
 ## v0.5.0 — PDF upload and AI extraction
 The main feature: upload a safety data sheet, and the product is filled in.
