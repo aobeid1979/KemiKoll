@@ -1,3 +1,5 @@
+using System.Diagnostics.CodeAnalysis;
+
 using KemiKoll.Domain.Hazards;
 
 namespace KemiKoll.Domain.Products;
@@ -18,10 +20,14 @@ public sealed class ChemicalProduct
 
     // A list (not a set) keeps the order from the safety data sheet;
     // duplicates are prevented in AddHazardStatement.
-    private readonly List<HazardStatement> _hazardStatements = [];
+    // Not readonly: EF Core assigns this field when it loads a product from the database.
+    [SuppressMessage("Style", "IDE0044:Make field readonly", Justification = "Set by EF Core when loading from the database.")]
+    private List<HazardStatement> _hazardStatements = [];
 
     // Same approach for pictograms: order kept, duplicates prevented in AddPictogram.
-    private readonly List<Pictogram> _pictograms = [];
+    // Not readonly for the same reason.
+    [SuppressMessage("Style", "IDE0044:Make field readonly", Justification = "Set by EF Core when loading from the database.")]
+    private List<Pictogram> _pictograms = [];
 
     private ChemicalProduct(Guid id, string name, string supplier)
     {
