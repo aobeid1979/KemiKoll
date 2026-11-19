@@ -68,9 +68,14 @@
     background: #fff;
 }
 
-.code.pictogram {
-    border-color: #d33;
-    color: #a11;
+/* Pictogram images sit side by side and wrap when there are many. */
+.pictograms {
+    min-width: 100px;
+}
+
+.pictograms ::deep .ghs-pictogram {
+    margin: 0 0.15rem 0.15rem 0;
+    vertical-align: middle;
 }
 
 .badge {

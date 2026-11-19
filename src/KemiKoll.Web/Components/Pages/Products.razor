@@ -55,10 +55,10 @@ else
                             <span class="code">@hazardCode</span>
                         }
                     </td>
-                    <td>
+                    <td class="pictograms">
                         @foreach (var pictogramCode in product.PictogramCodes)
                         {
-                            <span class="code pictogram">@pictogramCode</span>
+                            <PictogramImage Code="@pictogramCode" Size="40" />
                         }
                     </td>
                     <td>

@@ -1,6 +1,5 @@
 @page "/products/new"
 @rendermode InteractiveServer
-@using System.Text.RegularExpressions
 @using KemiKoll.Application.Products
 @using KemiKoll.Domain.Hazards
 @inject AddProduct AddProductUseCase
@@ -43,8 +42,9 @@
                     <input type="checkbox"
                            checked="@_selectedPictograms.Contains(pictogram)"
                            @onchange="e => TogglePictogram(pictogram, (bool)e.Value!)" />
+                    <PictogramImage Code="@pictogram.ToCode()" Size="32" />
                     <span class="code">@pictogram.ToCode()</span>
-                    @DisplayName(pictogram)
+                    @PictogramNames.DisplayName(pictogram)
                 </label>
             }
         </div>
@@ -122,12 +122,5 @@
         {
             _isSaving = false;
         }
-    }
-
-    // "SkullAndCrossbones" → "Skull and crossbones"
-    private static string DisplayName(Pictogram pictogram)
-    {
-        var words = Regex.Replace(pictogram.ToString(), "(?<!^)([A-Z])", " $1");
-        return words[0] + words[1..].ToLowerInvariant();
     }
 }

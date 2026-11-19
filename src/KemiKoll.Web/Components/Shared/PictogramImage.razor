@@ -1,0 +1,25 @@
+@*
+    Shows one official GHS pictogram image from wwwroot/img/ghs/, for example GHS02.svg.
+    The tooltip and alternative text (for screen readers) are "GHS02 – Flame".
+*@
+
+<img class="ghs-pictogram"
+     src="img/ghs/@(Code).svg"
+     alt="@_label"
+     title="@_label"
+     width="@Size"
+     height="@Size" />
+
+@code {
+    /// <summary>The pictogram code, for example "GHS02".</summary>
+    [Parameter, EditorRequired]
+    public string Code { get; set; } = string.Empty;
+
+    /// <summary>Width and height in pixels.</summary>
+    [Parameter]
+    public int Size { get; set; } = 40;
+
+    private string _label = string.Empty;
+
+    protected override void OnParametersSet() => _label = PictogramNames.Label(Code);
+}
