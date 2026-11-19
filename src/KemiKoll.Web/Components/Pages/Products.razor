@@ -23,6 +23,13 @@ else
 {
     <p class="summary">
         @_products.Count products, of which <strong>@_products.Count(p => p.IsHazardous) hazardous</strong>.
+        @{
+            var needAction = _products.Count(p => p.DataSheetStatus is DataSheetStatus.Missing or DataSheetStatus.DueForReview);
+        }
+        @if (needAction > 0)
+        {
+            <span class="attention">@needAction need attention.</span>
+        }
     </p>
 
     <table class="products">
@@ -33,6 +40,7 @@ else
                 <th>Hazard statements</th>
                 <th>Pictograms</th>
                 <th>Hazardous</th>
+                <th>Data sheet</th>
             </tr>
         </thead>
         <tbody>
@@ -63,6 +71,25 @@ else
                             <span class="badge safe">No</span>
                         }
                     </td>
+                    <td>
+                        @switch (product.DataSheetStatus)
+                        {
+                            case DataSheetStatus.UpToDate:
+                                <span class="badge safe">Up to date</span>
+                                <small class="revision">rev. @FormatDate(product.DataSheetRevisionDate)</small>
+                                break;
+                            case DataSheetStatus.DueForReview:
+                                <span class="badge review">Due for review</span>
+                                <small class="revision">rev. @FormatDate(product.DataSheetRevisionDate)</small>
+                                break;
+                            case DataSheetStatus.Missing:
+                                <span class="badge hazardous">Missing</span>
+                                break;
+                            default:
+                                <span class="not-required">Not required</span>
+                                break;
+                        }
+                    </td>
                 </tr>
             }
         </tbody>
@@ -77,4 +104,8 @@ else
     {
         _products = await ListProducts.ExecuteAsync();
     }
+
+    // ISO format (2025-03-10), the same as on Swedish safety data sheets.
+    private static string FormatDate(DateOnly? date) =>
+        date?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture) ?? string.Empty;
 }

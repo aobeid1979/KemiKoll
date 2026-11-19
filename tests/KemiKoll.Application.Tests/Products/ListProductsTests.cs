@@ -1,15 +1,33 @@
 using KemiKoll.Application.Products;
+using KemiKoll.Application.Tests.TestDoubles;
 using KemiKoll.Domain.Hazards;
 using KemiKoll.Domain.Products;
+using KemiKoll.Domain.SafetyDataSheets;
 
 namespace KemiKoll.Application.Tests.Products;
 
 public class ListProductsTests
 {
-    private readonly FakeProductRepository _repository = new();
+    // Default review policy is 3 years, so with this "today" a data sheet revised
+    // on or before 2023-06-01 is due for review.
+    private static readonly DateOnly Today = new(2026, 6, 1);
+
+    private readonly FakeProductRepository _products = new();
+    private readonly FakeSafetyDataSheetRepository _sheets = new();
     private readonly ListProducts _listProducts;
 
-    public ListProductsTests() => _listProducts = new ListProducts(_repository);
+    public ListProductsTests() =>
+        _listProducts = new ListProducts(_products, _sheets, new FixedTimeProvider(Today));
+
+    private ChemicalProduct AddHazardousProduct(string name = "Acetone")
+    {
+        var product = ChemicalProduct.Create(name, "Supplier", [HazardStatement.Parse("H225")]);
+        _products.Products.Add(product);
+        return product;
+    }
+
+    private void AddSheet(ChemicalProduct product, DateOnly revisionDate) =>
+        _sheets.Sheets.Add(SafetyDataSheet.Create(product.Id, revisionDate, "sv", "sheet.pdf"));
 
     [Fact]
     public async Task ExecuteAsync_NoProducts_ReturnsEmptyList()
@@ -20,9 +38,9 @@ public class ListProductsTests
     [Fact]
     public async Task ExecuteAsync_ReturnsProductsSortedByNameIgnoringCase()
     {
-        _repository.Products.Add(ChemicalProduct.Create("cutting fluid", "Supplier"));
-        _repository.Products.Add(ChemicalProduct.Create("Acetone", "Supplier"));
-        _repository.Products.Add(ChemicalProduct.Create("Brake cleaner", "Supplier"));
+        _products.Products.Add(ChemicalProduct.Create("cutting fluid", "Supplier"));
+        _products.Products.Add(ChemicalProduct.Create("Acetone", "Supplier"));
+        _products.Products.Add(ChemicalProduct.Create("Brake cleaner", "Supplier"));
 
         var result = await _listProducts.ExecuteAsync();
 
@@ -35,7 +53,8 @@ public class ListProductsTests
     {
         var product = ChemicalProduct.Create("Acetone", "ACME Kemi AB", [HazardStatement.Parse("H225")]);
         product.AddPictogram(Pictogram.Flame);
-        _repository.Products.Add(product);
+        _products.Products.Add(product);
+        AddSheet(product, new DateOnly(2025, 3, 10));
 
         var summary = Assert.Single(await _listProducts.ExecuteAsync());
 
@@ -45,5 +64,68 @@ public class ListProductsTests
         Assert.Equal("H225", Assert.Single(summary.HazardCodes));
         Assert.Equal("GHS02", Assert.Single(summary.PictogramCodes));
         Assert.True(summary.IsHazardous);
+        Assert.Equal(new DateOnly(2025, 3, 10), summary.DataSheetRevisionDate);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_NonHazardousWithoutSheet_IsNotRequired()
+    {
+        _products.Products.Add(ChemicalProduct.Create("Hand cleaner", "Supplier"));
+
+        var summary = Assert.Single(await _listProducts.ExecuteAsync());
+
+        Assert.Equal(DataSheetStatus.NotRequired, summary.DataSheetStatus);
+        Assert.Null(summary.DataSheetRevisionDate);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_HazardousWithoutSheet_IsMissing()
+    {
+        AddHazardousProduct();
+
+        var summary = Assert.Single(await _listProducts.ExecuteAsync());
+
+        Assert.Equal(DataSheetStatus.Missing, summary.DataSheetStatus);
+    }
+
+    [Theory]
+    [InlineData(2023, 6, 2, DataSheetStatus.UpToDate)]     // due tomorrow
+    [InlineData(2023, 6, 1, DataSheetStatus.DueForReview)] // due today
+    [InlineData(2020, 1, 1, DataSheetStatus.DueForReview)] // long overdue
+    [InlineData(2026, 1, 15, DataSheetStatus.UpToDate)]    // recent
+    public async Task ExecuteAsync_WithSheet_UsesDefaultReviewAge(int year, int month, int day, DataSheetStatus expected)
+    {
+        AddSheet(AddHazardousProduct(), new DateOnly(year, month, day));
+
+        var summary = Assert.Single(await _listProducts.ExecuteAsync());
+
+        Assert.Equal(expected, summary.DataSheetStatus);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SeveralRevisions_UsesNewest()
+    {
+        var product = AddHazardousProduct();
+        AddSheet(product, new DateOnly(2019, 1, 1));
+        AddSheet(product, new DateOnly(2025, 9, 1));
+        AddSheet(product, new DateOnly(2021, 1, 1));
+
+        var summary = Assert.Single(await _listProducts.ExecuteAsync());
+
+        Assert.Equal(DataSheetStatus.UpToDate, summary.DataSheetStatus);
+        Assert.Equal(new DateOnly(2025, 9, 1), summary.DataSheetRevisionDate);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SheetOfAnotherProduct_IsNotUsed()
+    {
+        var acetone = AddHazardousProduct("Acetone");
+        var brakeCleaner = AddHazardousProduct("Brake cleaner");
+        AddSheet(acetone, new DateOnly(2025, 1, 1));
+
+        var result = await _listProducts.ExecuteAsync();
+
+        Assert.Equal(DataSheetStatus.UpToDate, result.Single(p => p.Id == acetone.Id).DataSheetStatus);
+        Assert.Equal(DataSheetStatus.Missing, result.Single(p => p.Id == brakeCleaner.Id).DataSheetStatus);
     }
 }

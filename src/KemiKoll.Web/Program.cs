@@ -1,5 +1,7 @@
 using KemiKoll.Application.Products;
+using KemiKoll.Application.SafetyDataSheets;
 using KemiKoll.Infrastructure.Products;
+using KemiKoll.Infrastructure.SafetyDataSheets;
 using KemiKoll.Web.Components;
 using KemiKoll.Web.Development;
 
@@ -13,10 +15,15 @@ builder.Services.AddRazorComponents()
 // Storage: temporary in-memory repository, one shared instance for the whole app.
 // It is replaced by the database implementation in a later step; nothing else changes.
 builder.Services.AddSingleton<IProductRepository, InMemoryProductRepository>();
+builder.Services.AddSingleton<ISafetyDataSheetRepository, InMemorySafetyDataSheetRepository>();
+
+// The real system clock. Use cases ask TimeProvider for "today" so tests can use a fixed date.
+builder.Services.AddSingleton(TimeProvider.System);
 
 // Use cases: a new instance per request.
 builder.Services.AddScoped<AddProduct>();
 builder.Services.AddScoped<ListProducts>();
+builder.Services.AddScoped<AddSafetyDataSheet>();
 
 var app = builder.Build();
 
