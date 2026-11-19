@@ -2,11 +2,14 @@
 @using KemiKoll.Application.Products
 @inject ListProducts ListProducts
 
-@* The chemical inventory: one row per product. Read-only for now; the "add product" form comes next. *@
+@* The chemical inventory: one row per product. New products are added on /products/new. *@
 
 <PageTitle>Products – KemiKoll</PageTitle>
 
-<h1>Chemical products</h1>
+<div class="page-header">
+    <h1>Chemical products</h1>
+    <a class="button" href="products/new">+ Add product</a>
+</div>
 
 @if (_products is null)
 {

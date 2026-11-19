@@ -1,0 +1,133 @@
+@page "/products/new"
+@rendermode InteractiveServer
+@using System.Text.RegularExpressions
+@using KemiKoll.Application.Products
+@using KemiKoll.Domain.Hazards
+@inject AddProduct AddProductUseCase
+@inject NavigationManager Navigation
+
+@*
+    Form to add a chemical product by hand.
+    Interactive (server) rendering: checkboxes, errors and the save button
+    update without reloading the page.
+    All validation happens in the AddProduct use case; this page only shows its errors.
+*@
+
+<PageTitle>Add product – KemiKoll</PageTitle>
+
+<h1>Add product</h1>
+
+<form class="product-form" @onsubmit="SaveAsync">
+    <div class="field">
+        <label for="name">Name</label>
+        <input id="name" @bind="_name" placeholder="e.g. Acetone" autocomplete="off" />
+    </div>
+
+    <div class="field">
+        <label for="supplier">Supplier</label>
+        <input id="supplier" @bind="_supplier" placeholder="e.g. Exempel Kemi AB" autocomplete="off" />
+    </div>
+
+    <div class="field">
+        <label for="hazard-codes">Hazard statements</label>
+        <input id="hazard-codes" @bind="_hazardCodes" placeholder="e.g. H225, H319, EUH066" autocomplete="off" />
+        <small>Separate codes with commas or spaces. Leave empty if the product has none.</small>
+    </div>
+
+    <fieldset class="field">
+        <legend>Pictograms</legend>
+        <div class="pictograms">
+            @foreach (var pictogram in AllPictograms)
+            {
+                <label class="pictogram-option">
+                    <input type="checkbox"
+                           checked="@_selectedPictograms.Contains(pictogram)"
+                           @onchange="e => TogglePictogram(pictogram, (bool)e.Value!)" />
+                    <span class="code">@pictogram.ToCode()</span>
+                    @DisplayName(pictogram)
+                </label>
+            }
+        </div>
+    </fieldset>
+
+    @if (_errors.Count > 0)
+    {
+        <div class="errors" role="alert">
+            <strong>The product could not be saved:</strong>
+            <ul>
+                @foreach (var error in _errors)
+                {
+                    <li>@error</li>
+                }
+            </ul>
+        </div>
+    }
+
+    <div class="actions">
+        <button type="submit" class="primary" disabled="@_isSaving">
+            @(_isSaving ? "Saving…" : "Save product")
+        </button>
+        <a href="products">Cancel</a>
+    </div>
+</form>
+
+@code {
+    private static readonly Pictogram[] AllPictograms = Enum.GetValues<Pictogram>();
+
+    // Characters allowed between hazard codes: comma, semicolon and any whitespace (including new lines).
+    private static readonly char[] CodeSeparators = [',', ';', ' ', '\t', '\r', '\n'];
+
+    private readonly HashSet<Pictogram> _selectedPictograms = [];
+    private IReadOnlyList<string> _errors = [];
+    private string _name = string.Empty;
+    private string _supplier = string.Empty;
+    private string _hazardCodes = string.Empty;
+    private bool _isSaving;
+
+    private void TogglePictogram(Pictogram pictogram, bool isChecked)
+    {
+        if (isChecked)
+        {
+            _selectedPictograms.Add(pictogram);
+        }
+        else
+        {
+            _selectedPictograms.Remove(pictogram);
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        _isSaving = true;
+        try
+        {
+            var command = new AddProductCommand(
+                _name,
+                _supplier,
+                _hazardCodes.Split(CodeSeparators, StringSplitOptions.RemoveEmptyEntries),
+                // Keep the official order GHS01…GHS09, whatever order the boxes were ticked in.
+                AllPictograms.Where(_selectedPictograms.Contains).Select(p => p.ToCode()).ToList());
+
+            var result = await AddProductUseCase.ExecuteAsync(command);
+
+            if (result.Succeeded)
+            {
+                Navigation.NavigateTo("products");
+                return;
+            }
+
+            _errors = result.Errors;
+        }
+        finally
+        {
+            _isSaving = false;
+        }
+    }
+
+    // "SkullAndCrossbones" → "Skull and crossbones"
+    private static string DisplayName(Pictogram pictogram)
+    {
+        var words = Regex.Replace(pictogram.ToString(), "(?<!^)([A-Z])", " $1");
+        return words[0] + words[1..].ToLowerInvariant();
+    }
+}

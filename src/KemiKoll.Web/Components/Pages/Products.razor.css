@@ -1,5 +1,25 @@
 /* Styles for the product list page only (Blazor scoped CSS). */
 
+.page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.button {
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    background: #1f4e78;
+    color: #fff;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.button:hover {
+    background: #173b5c;
+}
+
 .summary {
     color: #444;
 }
