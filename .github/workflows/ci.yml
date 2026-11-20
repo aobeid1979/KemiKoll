@@ -43,6 +43,9 @@ jobs:
       - name: Build
         run: dotnet build KemiKoll.slnx --configuration Release --no-restore
 
+      - name: Run tests
+        run: dotnet test KemiKoll.slnx --configuration Release --no-build --verbosity normal
+
       # Installs the tools listed in .config/dotnet-tools.json (dotnet-ef).
       - name: Restore .NET tools
         run: dotnet tool restore
@@ -51,6 +54,3 @@ jobs:
       # Fix locally with: dotnet ef migrations add <Name> --project src/KemiKoll.Infrastructure --output-dir Persistence/Migrations
       - name: Check that migrations match the model
         run: dotnet ef migrations has-pending-model-changes --project src/KemiKoll.Infrastructure --configuration Release --no-build
-
-      - name: Run tests
-        run: dotnet test KemiKoll.slnx --configuration Release --no-build --verbosity normal
