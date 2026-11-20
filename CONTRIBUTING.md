@@ -57,6 +57,9 @@ Examples: `feat: add PDF upload`, `test: cover hazard statement parsing`.
 - **Comments explain *why*, not *what*.** Clear names explain the what.
 - **Validation lives in the Domain and the use cases**, never only in a page.
 - **New behaviour comes with tests.**
+- **Database changes come with a migration.** If you change an entity or a mapping in
+  `Infrastructure/Persistence`, run `dotnet ef migrations add <Name> --project src/KemiKoll.Infrastructure --output-dir Persistence/Migrations`
+  and commit the generated files. Never edit a migration that is already merged; add a new one.
 - Run `dotnet format KemiKoll.slnx` if CI reports a formatting error.
 
 ## Recording decisions
