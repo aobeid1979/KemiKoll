@@ -1,6 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <!-- EF Core with the PostgreSQL provider. Brings in Microsoft.EntityFrameworkCore. -->
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\KemiKoll.Application\KemiKoll.Application.csproj" />
   </ItemGroup>
 

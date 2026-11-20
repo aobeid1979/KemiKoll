@@ -8,5 +8,6 @@
   <Folder Name="/tests/">
     <Project Path="tests/KemiKoll.Application.Tests/KemiKoll.Application.Tests.csproj" />
     <Project Path="tests/KemiKoll.Domain.Tests/KemiKoll.Domain.Tests.csproj" />
+    <Project Path="tests/KemiKoll.Infrastructure.Tests/KemiKoll.Infrastructure.Tests.csproj" />
   </Folder>
 </Solution>
