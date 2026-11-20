@@ -1,8 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <!-- EF Core with the PostgreSQL provider. Brings in Microsoft.EntityFrameworkCore. -->
+    <!-- EF Core with the PostgreSQL provider. -->
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+
+    <!--
+      The provider only requires EF Core 10.0.4 or newer. Referencing EF Core directly
+      makes every project (Web, tests) use the same, latest patch version,
+      the same as the Design package below.
+    -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.15" />
 
     <!--
       Needed only by the "dotnet ef" command-line tool to create migrations.
