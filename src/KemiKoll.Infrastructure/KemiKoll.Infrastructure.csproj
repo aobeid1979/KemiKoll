@@ -3,6 +3,15 @@
   <ItemGroup>
     <!-- EF Core with the PostgreSQL provider. Brings in Microsoft.EntityFrameworkCore. -->
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+
+    <!--
+      Needed only by the "dotnet ef" command-line tool to create migrations.
+      PrivateAssets="all" keeps it out of the projects that reference Infrastructure (Web).
+    -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.15">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
