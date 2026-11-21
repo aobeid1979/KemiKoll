@@ -11,7 +11,7 @@ namespace KemiKoll.Infrastructure.Tests.Repositories;
 /// <summary>
 /// Saves and loads through the real repositories and a real PostgreSQL database.
 /// </summary>
-[Collection(PostgreSqlCollection.Name)]
+[Collection(PostgreSqlTestGroup.Name)]
 public sealed class EfRepositoryTests(PostgreSqlFixture database) : IAsyncLifetime
 {
     private readonly EfProductRepository _products = new(database.ContextFactory);

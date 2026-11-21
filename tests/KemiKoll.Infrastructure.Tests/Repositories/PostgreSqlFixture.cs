@@ -50,7 +50,7 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
 
 /// <summary>Lets all repository test classes share one PostgreSQL container.</summary>
 [CollectionDefinition(Name)]
-public sealed class PostgreSqlCollection : ICollectionFixture<PostgreSqlFixture>
+public sealed class PostgreSqlTestGroup : ICollectionFixture<PostgreSqlFixture>
 {
     public const string Name = "PostgreSQL";
 }
