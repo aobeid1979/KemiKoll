@@ -100,6 +100,30 @@ Requirements: [Docker Desktop](https://www.docker.com/products/docker-desktop/).
 The database is only reachable from your own computer (`localhost:5432`).
 `.env` is ignored by Git, so your password is never committed.
 
+### Database tables (EF Core migrations)
+
+The tables are created and updated by EF Core *migrations* in
+`src/KemiKoll.Infrastructure/Persistence/Migrations`. The `dotnet ef` tool is listed in
+`.config/dotnet-tools.json`; install it once per clone:
+
+```bash
+dotnet tool restore
+```
+
+Create or update the tables in your local database (use the password from your `.env`):
+
+```bash
+dotnet ef database update --project src/KemiKoll.Infrastructure --connection "Host=localhost;Port=5432;Database=kemikoll;Username=kemikoll;Password=<your password>"
+```
+
+After changing the database mapping, add a migration and commit it:
+
+```bash
+dotnet ef migrations add <DescriptiveName> --project src/KemiKoll.Infrastructure --output-dir Persistence/Migrations
+```
+
+CI fails if the mapping was changed without a migration.
+
 ## Contributing
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md) for the branch, commit and pull request rules.
