@@ -1,5 +1,7 @@
+using KemiKoll.Application.SafetyDataSheets;
 using KemiKoll.Domain.Hazards;
 using KemiKoll.Domain.Products;
+using KemiKoll.Domain.SafetyDataSheets;
 
 namespace KemiKoll.Application.Products;
 
@@ -11,11 +13,23 @@ namespace KemiKoll.Application.Products;
 /// <param name="Supplier">The supplier.</param>
 /// <param name="HazardCodes">Hazard statement codes, for example "H225".</param>
 /// <param name="PictogramCodes">GHS pictogram codes, for example "GHS02".</param>
+/// <param name="DataSheet">
+/// The safety data sheet the details came from, or <see langword="null"/> when the product is entered by hand.
+/// </param>
 public sealed record AddProductCommand(
     string Name,
     string Supplier,
     IReadOnlyList<string> HazardCodes,
-    IReadOnlyList<string> PictogramCodes);
+    IReadOnlyList<string> PictogramCodes,
+    NewDataSheet? DataSheet = null);
+
+/// <summary>
+/// A safety data sheet to register together with a new product.
+/// </summary>
+/// <param name="RevisionDate">The revision date printed on the data sheet.</param>
+/// <param name="LanguageCode">Two-letter language code, for example "sv".</param>
+/// <param name="FileName">The original PDF file name.</param>
+public sealed record NewDataSheet(DateOnly RevisionDate, string LanguageCode, string FileName);
 
 /// <summary>
 /// The outcome of adding a product: either the new product id, or a list of
@@ -51,9 +65,12 @@ public sealed record AddProductResult
 /// instead of exceptions, so a form can show all problems at once.
 /// </remarks>
 /// <param name="repository">Where products are stored.</param>
-public sealed class AddProduct(IProductRepository repository)
+/// <param name="sheets">Where safety data sheets are stored, when the command includes one.</param>
+public sealed class AddProduct(IProductRepository repository, ISafetyDataSheetRepository sheets)
 {
-    /// <summary>Validates the input, creates the product and saves it.</summary>
+    /// <summary>
+    /// Validates the input, creates the product and saves it, together with its data sheet if one is given.
+    /// </summary>
     /// <param name="command">The data entered by the user.</param>
     /// <param name="cancellationToken">Cancels the operation.</param>
     /// <returns>The new product id, or the validation errors.</returns>
@@ -77,6 +94,10 @@ public sealed class AddProduct(IProductRepository repository)
             errors.Add(UserMessages.From(exception));
         }
 
+        // The data sheet is validated BEFORE anything is saved, so an invalid data sheet
+        // never leaves a product behind without it.
+        var sheet = product is null ? null : CreateDataSheet(product.Id, command.DataSheet, errors);
+
         if (product is null || errors.Count > 0)
         {
             return AddProductResult.Failure(errors);
@@ -88,7 +109,30 @@ public sealed class AddProduct(IProductRepository repository)
         }
 
         await repository.AddAsync(product, cancellationToken).ConfigureAwait(false);
+        if (sheet is not null)
+        {
+            await sheets.AddAsync(sheet, cancellationToken).ConfigureAwait(false);
+        }
+
         return AddProductResult.Success(product.Id);
+    }
+
+    private static SafetyDataSheet? CreateDataSheet(Guid productId, NewDataSheet? dataSheet, List<string> errors)
+    {
+        if (dataSheet is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return SafetyDataSheet.Create(productId, dataSheet.RevisionDate, dataSheet.LanguageCode, dataSheet.FileName);
+        }
+        catch (ArgumentException exception)
+        {
+            errors.Add("Data sheet – " + UserMessages.From(exception));
+            return null;
+        }
     }
 
     private static List<HazardStatement> ParseHazardStatements(IReadOnlyList<string>? codes, List<string> errors)
