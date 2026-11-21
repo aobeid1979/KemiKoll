@@ -403,3 +403,8 @@ dotnet_naming_style.s_camelcase.required_suffix =
 dotnet_naming_style.s_camelcase.word_separator = 
 dotnet_naming_style.s_camelcase.capitalization = camel_case
 
+# EF Core migrations are created by "dotnet ef" and must never be edited by hand.
+# Marking them as generated code makes dotnet format and the code-style analyzers skip them,
+# so a migration generated on any computer (Windows or not) passes CI unchanged.
+[**/Persistence/Migrations/*.cs]
+generated_code = true
