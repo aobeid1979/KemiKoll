@@ -4,7 +4,7 @@
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
     <!--
       Local secrets (such as the database password) are stored outside the project folder,
-      never in Git. Set with: dotnet user-secrets set "ConnectionStrings:KemiKoll" "..." --project src/KemiKoll.Web
+      never in Git. See the README section "Connect the app to the database".
     -->
     <UserSecretsId>4c7429d0-e57e-4809-831b-4774ec4c7595</UserSecretsId>
   </PropertyGroup>
