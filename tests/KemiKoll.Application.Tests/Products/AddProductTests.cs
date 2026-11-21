@@ -1,4 +1,5 @@
 using KemiKoll.Application.Products;
+using KemiKoll.Application.Tests.TestDoubles;
 using KemiKoll.Domain.Hazards;
 
 namespace KemiKoll.Application.Tests.Products;
@@ -6,9 +7,10 @@ namespace KemiKoll.Application.Tests.Products;
 public class AddProductTests
 {
     private readonly FakeProductRepository _repository = new();
+    private readonly FakeSafetyDataSheetRepository _sheets = new();
     private readonly AddProduct _addProduct;
 
-    public AddProductTests() => _addProduct = new AddProduct(_repository);
+    public AddProductTests() => _addProduct = new AddProduct(_repository, _sheets);
 
     private static AddProductCommand Command(
         string name = "Degreaser X",
@@ -89,5 +91,40 @@ public class AddProductTests
     public async Task ExecuteAsync_NullCommand_Throws()
     {
         await Assert.ThrowsAsync<ArgumentNullException>(() => _addProduct.ExecuteAsync(null!));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithDataSheet_SavesProductAndDataSheet()
+    {
+        var command = Command() with { DataSheet = new NewDataSheet(new DateOnly(2025, 3, 10), "sv", "acetone-sds.pdf") };
+
+        var result = await _addProduct.ExecuteAsync(command);
+
+        Assert.True(result.Succeeded);
+        var sheet = Assert.Single(_sheets.Sheets);
+        Assert.Equal(result.ProductId, sheet.ProductId);
+        Assert.Equal(new DateOnly(2025, 3, 10), sheet.RevisionDate);
+        Assert.Equal("acetone-sds.pdf", sheet.FileName);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithoutDataSheet_SavesNoDataSheet()
+    {
+        await _addProduct.ExecuteAsync(Command());
+
+        Assert.Empty(_sheets.Sheets);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_InvalidDataSheet_SavesNothing()
+    {
+        var command = Command() with { DataSheet = new NewDataSheet(new DateOnly(2025, 3, 10), "swedish", "sheet.pdf") };
+
+        var result = await _addProduct.ExecuteAsync(command);
+
+        Assert.False(result.Succeeded);
+        Assert.StartsWith("Data sheet – LanguageCode:", Assert.Single(result.Errors), StringComparison.Ordinal);
+        Assert.Empty(_repository.Products);
+        Assert.Empty(_sheets.Sheets);
     }
 }

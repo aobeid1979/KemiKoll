@@ -32,11 +32,12 @@ Data survives a restart. The screens do not change.
 
 ## v0.5.0 — PDF upload and extraction
 The main feature: upload a safety data sheet, and the product is filled in.
-- [ ] Upload a PDF and store the file
+- [x] Upload a PDF on the "Add product" page
+- [ ] Store the PDF file itself, so it can be opened later
 - [x] Extract text from the PDF (#22)
 - [x] Find H-phrases, pictogram codes, revision date, product name and supplier with fixed rules ([decision 0006](decisions/0006-rule-based-extraction-first.md))
 - [ ] Optional later: AI for the fields the rules cannot find
-- [ ] User checks and confirms the result in the existing form
+- [x] User checks and confirms the result in the existing form
 - [ ] Tests with real, public safety data sheets
 
 ## v0.6.0 — Working with the inventory
