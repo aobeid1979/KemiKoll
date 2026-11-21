@@ -1,6 +1,7 @@
 using KemiKoll.Application.Products;
 using KemiKoll.Application.SafetyDataSheets;
 using KemiKoll.Infrastructure;
+using KemiKoll.Web;
 using KemiKoll.Web.Components;
 using KemiKoll.Web.Development;
 
@@ -26,8 +27,8 @@ builder.Services.AddScoped<AddSafetyDataSheet>();
 
 var app = builder.Build();
 
-app.Logger.LogInformation(
-    "Storage: {Storage}",
+StartupLog.Storage(
+    app.Logger,
     string.IsNullOrWhiteSpace(connectionString) ? "in memory (data is lost on restart)" : "PostgreSQL");
 
 // Configure the HTTP request pipeline.
