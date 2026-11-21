@@ -263,14 +263,12 @@ public static partial class SafetyDataSheetTextParser
 
         // In table-like layouts the next column follows on the same line after a wide gap
         // ("Product Identifier    Solvent        Version: 8"); keep only the first column.
-        var value = ColumnGap().Split(match.Groups["value"].Value.Trim())[0];
+        var value = CleanValue(match.Groups["value"].Value);
         if (value.Length == 0)
         {
             var nextLine = NextNonEmptyLine().Match(section, match.Index + match.Length);
-            value = nextLine.Success ? ColumnGap().Split(nextLine.Groups["line"].Value.Trim())[0] : string.Empty;
+            value = nextLine.Success ? CleanValue(nextLine.Groups["line"].Value) : string.Empty;
         }
-
-        value = value.Trim(' ', ':', '-', '–', '\t');
         if (value.Length == 0)
         {
             return null;
@@ -284,13 +282,21 @@ public static partial class SafetyDataSheetTextParser
     // looks like a company name ("… AB", "… Ltd.", "… GmbH"); otherwise take the first.
     private static string? FindSupplier(string section1)
     {
+        // A "Supplier:" label first; otherwise the heading of section 1.3, which in an EU data
+        // sheet always holds the supplier details, often with the company name on the next line.
         var match = SupplierLabels().Match(section1);
+        if (!match.Success)
+        {
+            match = SupplierSectionHeading().Match(section1);
+        }
+
         if (!match.Success)
         {
             return null;
         }
 
         var candidates = new List<string>();
+        // The section heading has no "value" group, so its same-line value is empty.
         var sameLine = CleanValue(match.Groups["value"].Value);
         if (sameLine.Length > 0)
         {
@@ -318,8 +324,13 @@ public static partial class SafetyDataSheetTextParser
 
     private const int SupplierCandidateLines = 4;
 
-    private static string CleanValue(string value) =>
-        ColumnGap().Split(value.Trim())[0].Trim(' ', ':', '-', '–', '\t');
+    private static string CleanValue(string value)
+    {
+        var firstColumn = ColumnGap().Split(value.Trim())[0];
+
+        // A second field on the same line: "Solvent Version: 8" → "Solvent".
+        return NextFieldOnSameLine().Replace(firstColumn, string.Empty).Trim(' ', ':', '-', '–', '\t');
+    }
 
     private static string Truncate(string value) =>
         value.Length > MaxTextValueLength ? value[..MaxTextValueLength] : value;
@@ -377,6 +388,13 @@ public static partial class SafetyDataSheetTextParser
     [GeneratedRegex(@"\t|[ ]{3,}", RegexOptions.CultureInvariant)]
     private static partial Regex ColumnGap();
 
+    // A known field label after the value on the same line (" Version: 8", " Revision date: …").
+    // Removed together with everything after it. A fixed list, so product names stay whole.
+    [GeneratedRegex(
+        @"\s+(?:Version(?:snummer)?|Revision(?:\s*date)?|Revisionsdatum|Utgåva|Ersätter|Supersedes|Effective\s+date|Issue\s+date|Date|Datum|Page|Sida)\s*:.*$",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex NextFieldOnSameLine();
+
     // Numbered section headings: "AVSNITT 3:", "SECTION 3.", "Section 12. Ecological information".
     [GeneratedRegex(
         @"^[ \t]*(?:AVSNITT|SECTION)[ \t]*(?<number>\d{1,2})(?!\.?\d)",
@@ -400,6 +418,11 @@ public static partial class SafetyDataSheetTextParser
         @"^[ \t]*(?:(?:Initial\s+)?Supplier(?:\s+identifier)?|Leverantör|Tillverkare|Manufacturer|Företag|Company(?:[ \t]+name)?)(?![\p{L}'’])[ \t]*[:\-–]?[ \t]*(?<value>[^\r\n]*)\r?$",
         RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant)]
     private static partial Regex SupplierLabels();
+
+    // "1.3 Närmare upplysningar om den som tillhandahåller säkerhetsdatablad",
+    // "1.3 Details of the supplier of the safety data sheet". Not "1.30".
+    [GeneratedRegex(@"^[ \t]*1\.3(?!\d)[^\r\n]*\r?$", RegexOptions.Multiline | RegexOptions.CultureInvariant)]
+    private static partial Regex SupplierSectionHeading();
 
     [GeneratedRegex(@"\G\s*?\r?\n[ \t]*(?<line>[^\r\n]*\S[^\r\n]*)", RegexOptions.CultureInvariant)]
     private static partial Regex NextNonEmptyLine();
