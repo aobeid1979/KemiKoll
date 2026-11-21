@@ -1,5 +1,7 @@
+using KemiKoll.Application.Documents;
 using KemiKoll.Application.Products;
 using KemiKoll.Application.SafetyDataSheets;
+using KemiKoll.Infrastructure.Documents;
 using KemiKoll.Infrastructure.Persistence;
 using KemiKoll.Infrastructure.Products;
 using KemiKoll.Infrastructure.SafetyDataSheets;
@@ -15,8 +17,8 @@ namespace KemiKoll.Infrastructure;
 public static class DependencyInjection
 {
     /// <summary>
-    /// Registers the repositories: PostgreSQL when a connection string is given,
-    /// otherwise the in-memory versions.
+    /// Registers the PDF reader and the repositories: PostgreSQL when a connection string
+    /// is given, otherwise the in-memory versions.
     /// </summary>
     /// <param name="services">The service collection of the application.</param>
     /// <param name="connectionString">
@@ -27,6 +29,9 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, string? connectionString)
     {
         ArgumentNullException.ThrowIfNull(services);
+
+        // Reading PDF files does not depend on the storage choice. No state, so one shared instance.
+        services.AddSingleton<IPdfTextReader, PdfPigTextReader>();
 
         if (string.IsNullOrWhiteSpace(connectionString))
         {
