@@ -8,7 +8,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Added
 - Read the text of PDF files (`IPdfTextReader`, PdfPig 0.1.16) with limits for untrusted uploads: 20 MB, 100 pages. (#22)
-- Find hazard codes, pictogram codes, revision date, language, product name and supplier in a safety data sheet with fixed rules (`SafetyDataSheetTextParser`, `ReadSafetyDataSheet`).
+- Find hazard codes, pictogram codes, revision date, language, product name and supplier in a safety data sheet with fixed rules (`SafetyDataSheetTextParser`, `ReadSafetyDataSheet`). (#23)
+- Upload a safety data sheet PDF on the "Add product" page: the form is filled in with the suggestions; the data sheet (revision date, language, file name) is saved together with the product.
+
+### Changed
+- `AddProduct` can save a data sheet together with the product; the data sheet is validated before anything is saved.
 
 ## [0.4.0] - 2026-11-21
 
