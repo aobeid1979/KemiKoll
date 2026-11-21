@@ -170,3 +170,31 @@ button.link {
     text-decoration: underline;
     cursor: pointer;
 }
+
+/* CLP check of the pictograms against the hazard statements. */
+.pictogram-check {
+    margin-top: 0.75rem;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid #f0d49a;
+    border-radius: 4px;
+    background: #fff8e6;
+    color: #6b4700;
+}
+
+.pictogram-check p {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin: 0;
+}
+
+.pictogram-check ul {
+    margin: 0.4rem 0;
+    padding-left: 1.2rem;
+}
+
+.no-rule {
+    display: block;
+    margin-top: 0.5rem;
+    color: #6b4700;
+}

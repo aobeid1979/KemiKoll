@@ -128,4 +128,29 @@ public class ListProductsTests
         Assert.Equal(DataSheetStatus.UpToDate, result.Single(p => p.Id == acetone.Id).DataSheetStatus);
         Assert.Equal(DataSheetStatus.Missing, result.Single(p => p.Id == brakeCleaner.Id).DataSheetStatus);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_WrongPictogram_IsReported()
+    {
+        // H225 requires GHS02 (flame); GHS03 (flame over circle) is for oxidisers.
+        var product = AddHazardousProduct("Ethanol");
+        product.AddPictogram(Pictogram.FlameOverCircle);
+
+        var summary = Assert.Single(await _listProducts.ExecuteAsync());
+
+        Assert.Equal("GHS02", Assert.Single(summary.MissingPictogramCodes));
+        Assert.Equal("GHS03", Assert.Single(summary.UnexpectedPictogramCodes));
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_MatchingPictograms_ReportNothing()
+    {
+        var product = AddHazardousProduct("Acetone");
+        product.AddPictogram(Pictogram.Flame);
+
+        var summary = Assert.Single(await _listProducts.ExecuteAsync());
+
+        Assert.Empty(summary.MissingPictogramCodes);
+        Assert.Empty(summary.UnexpectedPictogramCodes);
+    }
 }

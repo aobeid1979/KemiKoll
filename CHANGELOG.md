@@ -11,6 +11,8 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - Find hazard codes, pictogram codes, revision date, language, product name and supplier in a safety data sheet with fixed rules (`SafetyDataSheetTextParser`, `ReadSafetyDataSheet`). (#23)
 - Upload a safety data sheet PDF on the "Add product" page: the form is filled in with the suggestions; the data sheet (revision date, language, file name) is saved together with the product.
 
+- CLP pictogram rules (`PictogramRules`): required pictograms from the H-codes with the Article 26 precedence rules. Used to suggest pictograms when a data sheet shows them only as images, to check the form live (with "Use the pictograms that match the H-codes"), and to show "Missing / Not expected" in the product list. ([decision 0007](docs/decisions/0007-pictograms-from-hazard-statements.md))
+
 ### Changed
 - `AddProduct` can save a data sheet together with the product; the data sheet is validated before anything is saved.
 - Data sheet extraction tested with real files and improved: dates with month names ("25 January 2021", "25 januari 2021"), more revision-date labels ("Effective date", "Date of latest revision", "Senast reviderad" …), "Product identifier" as fallback for the name, supplier chosen by company-name ending (AB, Ltd., GmbH …), table layouts with label and value on one line.
