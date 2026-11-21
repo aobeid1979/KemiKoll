@@ -7,7 +7,8 @@ and the project uses [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
-- Read the text of PDF files (`IPdfTextReader`, PdfPig 0.1.16) with limits for untrusted uploads: 20 MB, 100 pages.
+- Read the text of PDF files (`IPdfTextReader`, PdfPig 0.1.16) with limits for untrusted uploads: 20 MB, 100 pages. (#22)
+- Find hazard codes, pictogram codes, revision date, language, product name and supplier in a safety data sheet with fixed rules (`SafetyDataSheetTextParser`, `ReadSafetyDataSheet`).
 
 ## [0.4.0] - 2026-11-21
 

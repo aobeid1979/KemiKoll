@@ -30,11 +30,12 @@ Data survives a restart. The screens do not change.
 - [x] Database migrations (#20)
 - [x] Use the database instead of in-memory storage
 
-## v0.5.0 — PDF upload and AI extraction
+## v0.5.0 — PDF upload and extraction
 The main feature: upload a safety data sheet, and the product is filled in.
 - [ ] Upload a PDF and store the file
-- [x] Extract text from the PDF
-- [ ] AI extraction of product name, supplier, revision date, H-phrases and pictograms
+- [x] Extract text from the PDF (#22)
+- [x] Find H-phrases, pictogram codes, revision date, product name and supplier with fixed rules ([decision 0006](decisions/0006-rule-based-extraction-first.md))
+- [ ] Optional later: AI for the fields the rules cannot find
 - [ ] User checks and confirms the result in the existing form
 - [ ] Tests with real, public safety data sheets
 
