@@ -60,6 +60,15 @@ else
                         {
                             <PictogramImage Code="@pictogramCode" Size="40" />
                         }
+                        @* CLP check: do the pictograms match the hazard statements? *@
+                        @if (product.MissingPictogramCodes.Count > 0)
+                        {
+                            <small class="pictogram-check">Missing: @string.Join(", ", product.MissingPictogramCodes)</small>
+                        }
+                        @if (product.UnexpectedPictogramCodes.Count > 0)
+                        {
+                            <small class="pictogram-check">Not expected: @string.Join(", ", product.UnexpectedPictogramCodes)</small>
+                        }
                     </td>
                     <td>
                         @if (product.IsHazardous)

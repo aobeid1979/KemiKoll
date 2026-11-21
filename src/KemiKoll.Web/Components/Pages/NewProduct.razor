@@ -79,6 +79,37 @@
                 </label>
             }
         </div>
+
+        @* CLP check of the ticked pictograms against the hazard statements typed above. *@
+        @{
+            var check = CheckPictograms();
+        }
+        @if (check.Missing.Count > 0 || check.Unexpected.Count > 0)
+        {
+            <div class="pictogram-check" role="status">
+                <p>According to CLP, these H-codes require:
+                    @foreach (var required in check.Requirement.Required)
+                    {
+                        <PictogramImage Code="@required.ToCode()" Size="24" />
+                    }
+                </p>
+                <ul>
+                    @if (check.Missing.Count > 0)
+                    {
+                        <li>Missing: @string.Join(", ", check.Missing.Select(p => $"{p.ToCode()} {PictogramNames.DisplayName(p)}"))</li>
+                    }
+                    @if (check.Unexpected.Count > 0)
+                    {
+                        <li>Not expected: @string.Join(", ", check.Unexpected.Select(p => $"{p.ToCode()} {PictogramNames.DisplayName(p)}"))</li>
+                    }
+                </ul>
+                <button type="button" class="link" @onclick="() => UseRequiredPictograms(check.Requirement)">Use the pictograms that match the H-codes</button>
+            </div>
+        }
+        @if (check.Requirement.CodesWithoutRule.Count > 0)
+        {
+            <small class="no-rule">No pictogram rule for @string.Join(", ", check.Requirement.CodesWithoutRule); check these pictograms in the data sheet.</small>
+        }
     </fieldset>
 
     @if (_dataSheetFileName is not null)
@@ -220,6 +251,24 @@
         _dataSheetFileName = null;
         _revisionDate = null;
         _warnings = [];
+    }
+
+    // Valid codes from the hazard-statement field; invalid ones are reported when saving.
+    private (PictogramRequirement Requirement, IReadOnlyList<Pictogram> Missing, IReadOnlyList<Pictogram> Unexpected) CheckPictograms()
+    {
+        var statements = _hazardCodes
+            .Split(CodeSeparators, StringSplitOptions.RemoveEmptyEntries)
+            .Select(code => HazardStatement.TryParse(code, out var statement) ? statement : null)
+            .OfType<HazardStatement>();
+
+        var requirement = PictogramRules.For(statements);
+        return (requirement, requirement.MissingFrom(_selectedPictograms), requirement.UnexpectedIn(_selectedPictograms));
+    }
+
+    private void UseRequiredPictograms(PictogramRequirement requirement)
+    {
+        _selectedPictograms.Clear();
+        _selectedPictograms.UnionWith(requirement.Required);
     }
 
     private void TogglePictogram(Pictogram pictogram, bool isChecked)
