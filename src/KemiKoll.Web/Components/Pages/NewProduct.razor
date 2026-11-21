@@ -1,20 +1,51 @@
 @page "/products/new"
 @rendermode InteractiveServer
+@using KemiKoll.Application.Documents
 @using KemiKoll.Application.Products
 @using KemiKoll.Domain.Hazards
 @inject AddProduct AddProductUseCase
+@inject ReadSafetyDataSheet ReadSafetyDataSheetUseCase
 @inject NavigationManager Navigation
 
 @*
-    Form to add a chemical product by hand.
-    Interactive (server) rendering: checkboxes, errors and the save button
+    Form to add a chemical product, by hand or filled in from a safety data sheet PDF.
+    Interactive (server) rendering: upload, checkboxes, errors and the save button
     update without reloading the page.
-    All validation happens in the AddProduct use case; this page only shows its errors.
+    All validation happens in the use cases; this page only shows their suggestions and errors.
 *@
 
 <PageTitle>Add product – KemiKoll</PageTitle>
 
 <h1>Add product</h1>
+
+<section class="upload">
+    <label for="sds-file"><strong>Fill in from a safety data sheet</strong> (PDF, max 20 MB)</label>
+    <InputFile id="sds-file" accept=".pdf,application/pdf" OnChange="ReadDataSheetAsync" disabled="@_isReading" />
+
+    @if (_isReading)
+    {
+        <p class="status">Reading the data sheet…</p>
+    }
+    else if (_readError is not null)
+    {
+        <p class="read-error" role="alert">@_readError</p>
+    }
+    else if (_dataSheetFileName is not null)
+    {
+        <div class="read-ok">
+            <strong>Filled in from @_dataSheetFileName.</strong> Check every field against the data sheet before saving.
+            @if (_warnings.Count > 0)
+            {
+                <ul>
+                    @foreach (var warning in _warnings)
+                    {
+                        <li>@warning</li>
+                    }
+                </ul>
+            }
+        </div>
+    }
+</section>
 
 <form class="product-form" @onsubmit="SaveAsync">
     <div class="field">
@@ -50,6 +81,36 @@
         </div>
     </fieldset>
 
+    @if (_dataSheetFileName is not null)
+    {
+        <fieldset class="field data-sheet">
+            <legend>Safety data sheet</legend>
+            <p class="file-name">
+                @_dataSheetFileName
+                <button type="button" class="link" @onclick="RemoveDataSheet">Remove</button>
+            </p>
+            <div class="data-sheet-fields">
+                <div class="field">
+                    <label for="revision-date">Revision date</label>
+                    <input id="revision-date" type="date" @bind="_revisionDate" />
+                </div>
+                <div class="field">
+                    <label for="language">Language</label>
+                    <select id="language" @bind="_languageCode">
+                        @foreach (var (languageCode, languageName) in Languages)
+                        {
+                            <option value="@languageCode">@languageName</option>
+                        }
+                    </select>
+                    @if (_languageCode != "sv")
+                    {
+                        <small class="warning">In Sweden the supplier must provide the data sheet in Swedish.</small>
+                    }
+                </div>
+            </div>
+        </fieldset>
+    }
+
     @if (_errors.Count > 0)
     {
         <div class="errors" role="alert">
@@ -64,7 +125,7 @@
     }
 
     <div class="actions">
-        <button type="submit" class="primary" disabled="@_isSaving">
+        <button type="submit" class="primary" disabled="@(_isSaving || _isReading)">
             @(_isSaving ? "Saving…" : "Save product")
         </button>
         <a href="products">Cancel</a>
@@ -77,12 +138,89 @@
     // Characters allowed between hazard codes: comma, semicolon and any whitespace (including new lines).
     private static readonly char[] CodeSeparators = [',', ';', ' ', '\t', '\r', '\n'];
 
+    // The same limit as the PDF reader; the browser stops sending larger files early.
+    private const long MaxUploadBytes = 20 * 1024 * 1024;
+
+    private static readonly (string Code, string Name)[] Languages =
+        [("sv", "Swedish"), ("en", "English"), ("no", "Norwegian"), ("da", "Danish"), ("fi", "Finnish"), ("de", "German")];
+
     private readonly HashSet<Pictogram> _selectedPictograms = [];
     private IReadOnlyList<string> _errors = [];
     private string _name = string.Empty;
     private string _supplier = string.Empty;
     private string _hazardCodes = string.Empty;
     private bool _isSaving;
+
+    // Data sheet upload state. _dataSheetFileName is set once a PDF was read successfully.
+    private bool _isReading;
+    private string? _readError;
+    private string? _dataSheetFileName;
+    private IReadOnlyList<string> _warnings = [];
+    private DateOnly? _revisionDate;
+    private string _languageCode = "sv";
+
+    private async Task ReadDataSheetAsync(InputFileChangeEventArgs e)
+    {
+        _isReading = true;
+        _readError = null;
+        try
+        {
+            ReadSafetyDataSheetResult result;
+            try
+            {
+                await using var stream = e.File.OpenReadStream(MaxUploadBytes);
+                result = await ReadSafetyDataSheetUseCase.ExecuteAsync(stream);
+            }
+            catch (IOException)
+            {
+                // Thrown by OpenReadStream when the file is larger than MaxUploadBytes.
+                _readError = "The file is larger than 20 MB.";
+                return;
+            }
+
+            if (result.Extraction is not { } extraction)
+            {
+                _readError = result.Error;
+                return;
+            }
+
+            Fill(extraction, e.File.Name);
+        }
+        finally
+        {
+            _isReading = false;
+        }
+    }
+
+    // Replaces the form contents with the suggestions. Name and supplier keep what was typed if not found.
+    private void Fill(SafetyDataSheetExtraction extraction, string fileName)
+    {
+        _name = extraction.ProductName ?? _name;
+        _supplier = extraction.Supplier ?? _supplier;
+        _hazardCodes = string.Join(", ", extraction.HazardCodes);
+
+        _selectedPictograms.Clear();
+        foreach (var pictogramCode in extraction.PictogramCodes)
+        {
+            if (PictogramCodes.TryParse(pictogramCode, out var pictogram))
+            {
+                _selectedPictograms.Add(pictogram);
+            }
+        }
+
+        _dataSheetFileName = fileName;
+        _revisionDate = extraction.RevisionDate;
+        _languageCode = extraction.LanguageCode ?? "sv";
+        _warnings = extraction.Warnings;
+        _errors = [];
+    }
+
+    private void RemoveDataSheet()
+    {
+        _dataSheetFileName = null;
+        _revisionDate = null;
+        _warnings = [];
+    }
 
     private void TogglePictogram(Pictogram pictogram, bool isChecked)
     {
@@ -98,15 +236,26 @@
 
     private async Task SaveAsync()
     {
+        if (_dataSheetFileName is not null && _revisionDate is null)
+        {
+            _errors = ["Enter the revision date of the data sheet, or remove the data sheet."];
+            return;
+        }
+
         _isSaving = true;
         try
         {
+            var dataSheet = _dataSheetFileName is not null && _revisionDate is { } revisionDate
+                ? new NewDataSheet(revisionDate, _languageCode, _dataSheetFileName)
+                : null;
+
             var command = new AddProductCommand(
                 _name,
                 _supplier,
                 _hazardCodes.Split(CodeSeparators, StringSplitOptions.RemoveEmptyEntries),
                 // Keep the official order GHS01…GHS09, whatever order the boxes were ticked in.
-                AllPictograms.Where(_selectedPictograms.Contains).Select(p => p.ToCode()).ToList());
+                AllPictograms.Where(_selectedPictograms.Contains).Select(p => p.ToCode()).ToList(),
+                dataSheet);
 
             var result = await AddProductUseCase.ExecuteAsync(command);
 

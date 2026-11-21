@@ -95,3 +95,78 @@ button.primary:disabled {
     opacity: 0.6;
     cursor: wait;
 }
+
+/* Upload area at the top of the form. */
+.upload {
+    max-width: 640px;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    border: 2px dashed #9fb4c8;
+    border-radius: 6px;
+    background: #f6f9fc;
+}
+
+.upload label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: normal;
+}
+
+.status {
+    margin: 0.5rem 0 0;
+    color: #1f4e78;
+}
+
+.read-error {
+    margin: 0.5rem 0 0;
+    color: #8a1010;
+}
+
+.read-ok {
+    margin-top: 0.75rem;
+    padding: 0.6rem 0.8rem;
+    border-radius: 4px;
+    background: #e6f4ea;
+    color: #1e5a2c;
+}
+
+.read-ok ul {
+    margin: 0.4rem 0 0;
+    padding-left: 1.2rem;
+    color: #8a5a00;
+}
+
+.file-name {
+    margin: 0 0 0.6rem;
+}
+
+.data-sheet-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.data-sheet-fields .field {
+    margin-bottom: 0;
+}
+
+select {
+    padding: 0.45rem 0.6rem;
+    border: 1px solid #c9ced4;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.warning {
+    color: #8a5a00;
+}
+
+button.link {
+    margin-left: 0.75rem;
+    padding: 0;
+    border: none;
+    background: none;
+    color: #1f4e78;
+    text-decoration: underline;
+    cursor: pointer;
+}

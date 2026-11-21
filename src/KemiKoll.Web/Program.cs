@@ -1,3 +1,4 @@
+using KemiKoll.Application.Documents;
 using KemiKoll.Application.Products;
 using KemiKoll.Application.SafetyDataSheets;
 using KemiKoll.Infrastructure;
@@ -24,6 +25,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<AddProduct>();
 builder.Services.AddScoped<ListProducts>();
 builder.Services.AddScoped<AddSafetyDataSheet>();
+builder.Services.AddScoped<ReadSafetyDataSheet>();
 
 var app = builder.Build();
 
