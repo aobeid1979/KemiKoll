@@ -33,7 +33,7 @@ Data survives a restart. The screens do not change.
 ## v0.5.0 — PDF upload and AI extraction
 The main feature: upload a safety data sheet, and the product is filled in.
 - [ ] Upload a PDF and store the file
-- [ ] Extract text from the PDF
+- [x] Extract text from the PDF
 - [ ] AI extraction of product name, supplier, revision date, H-phrases and pictograms
 - [ ] User checks and confirms the result in the existing form
 - [ ] Tests with real, public safety data sheets

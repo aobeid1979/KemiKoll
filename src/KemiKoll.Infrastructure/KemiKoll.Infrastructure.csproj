@@ -11,6 +11,9 @@
     -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.15" />
 
+    <!-- Reads the text of PDF files (safety data sheets). Apache-2.0 license. -->
+    <PackageReference Include="PdfPig" Version="0.1.16" />
+
     <!--
       Needed only by the "dotnet ef" command-line tool to create migrations.
       PrivateAssets="all" keeps it out of the projects that reference Infrastructure (Web).

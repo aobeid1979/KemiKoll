@@ -23,3 +23,9 @@ KemiKoll includes the following material that was not created by this project.
 
 The files are used unchanged, only renamed to their GHS code.
 See each file page above for its licence terms.
+
+## PdfPig
+
+- **What:** library used to read the text of PDF files (NuGet package `PdfPig`).
+- **Source:** https://github.com/UglyToad/PdfPig
+- **License:** Apache License 2.0
