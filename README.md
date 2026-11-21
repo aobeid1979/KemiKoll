@@ -14,7 +14,7 @@ KemiKoll keeps it in one place: which products you have, how hazardous they are,
 and whether each data sheet is present and up to date. The goal is that a workshop
 uploads its data sheets as PDF files and an AI agent fills in the inventory.
 
-> **Status:** early development — version **0.3.0**. See the [roadmap](docs/roadmap.md).
+> **Status:** early development — version **0.4.0**. See the [roadmap](docs/roadmap.md).
 >
 > KemiKoll is a support tool. It does not replace the employer's legal responsibility
 > or professional advice.
@@ -26,7 +26,8 @@ uploads its data sheets as PDF files and an AI agent fills in the inventory.
 - **Data sheet status** for every product:
   🟢 up to date · 🟠 due for review (older than 3 years by default) · 🔴 missing · not required.
 - **Add product** form that validates H-codes and pictograms and shows clear error messages.
-- Example data in Development mode. Data is kept in memory for now and is lost on restart.
+- **PostgreSQL storage**: products and data sheets survive a restart. Without a database configured, data is kept in memory.
+- Example data in Development mode when the inventory is empty.
 
 ## Tech stack
 
@@ -46,7 +47,8 @@ src/
                             safety data sheets, companies. Depends on nothing.
   KemiKoll.Application/     Use cases (add product, list products, add data sheet)
                             and storage interfaces. Depends on Domain only.
-  KemiKoll.Infrastructure/  Storage implementations (in memory today, database next).
+  KemiKoll.Infrastructure/  Storage: PostgreSQL with EF Core (and in-memory versions),
+                            database mapping and migrations.
   KemiKoll.Web/             Blazor UI and the composition root (Program.cs).
 tests/
   KemiKoll.Domain.Tests/
@@ -72,8 +74,8 @@ Tip: `dotnet watch --project src/KemiKoll.Web` restarts automatically when you s
 
 ### Local database (PostgreSQL in Docker)
 
-The app does not use the database yet — that comes in v0.4.0. Without a database it keeps
-data in memory, so Docker is optional for now.
+Docker is optional: without a database connection, the app keeps data in memory
+(lost on restart). With it, everything is stored in PostgreSQL.
 
 Requirements: [Docker Desktop](https://www.docker.com/products/docker-desktop/).
 
@@ -123,6 +125,22 @@ dotnet ef migrations add <DescriptiveName> --project src/KemiKoll.Infrastructure
 ```
 
 CI fails if the mapping was changed without a migration.
+
+### Connect the app to the database
+
+The connection string is stored with .NET **User Secrets**: on your own computer, outside the
+project folder, never in Git. Set it once (use the password from your `.env`):
+
+```bash
+dotnet user-secrets set "ConnectionStrings:KemiKoll" "Host=localhost;Port=5432;Database=kemikoll;Username=kemikoll;Password=<your password>" --project src/KemiKoll.Web
+```
+
+When the app starts, the log shows **`Storage: PostgreSQL`** (or `Storage: in memory` if no
+connection string is set). To go back to in-memory storage:
+
+```bash
+dotnet user-secrets remove "ConnectionStrings:KemiKoll" --project src/KemiKoll.Web
+```
 
 ## Contributing
 

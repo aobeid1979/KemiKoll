@@ -4,8 +4,8 @@ using KemiKoll.Application.SafetyDataSheets;
 namespace KemiKoll.Web.Development;
 
 /// <summary>
-/// Adds a few example products and data sheets when the app runs in Development,
-/// so the product list is not empty while the in-memory storage is used.
+/// Adds a few example products and data sheets when the app runs in Development
+/// and the inventory is empty, so there is always something to look at.
 /// </summary>
 /// <remarks>
 /// Everything goes through the normal use cases, so the examples follow exactly
@@ -37,7 +37,7 @@ internal static class SampleData
             null),
     ];
 
-    /// <summary>Adds the example products and their data sheets.</summary>
+    /// <summary>Adds the example products and their data sheets, unless products already exist.</summary>
     /// <param name="services">The application's service provider.</param>
     /// <returns>A task that completes when all examples are added.</returns>
     /// <exception cref="InvalidOperationException">An example is invalid (a bug in this file).</exception>
@@ -45,6 +45,14 @@ internal static class SampleData
     {
         // Use cases are registered per request (scoped), so a scope is needed outside a request.
         using var scope = services.CreateScope();
+
+        // With a database the data survives restarts, so only add examples to an empty inventory.
+        var products = scope.ServiceProvider.GetRequiredService<IProductRepository>();
+        if ((await products.ListAsync()).Count > 0)
+        {
+            return;
+        }
+
         var addProduct = scope.ServiceProvider.GetRequiredService<AddProduct>();
         var addSheet = scope.ServiceProvider.GetRequiredService<AddSafetyDataSheet>();
 

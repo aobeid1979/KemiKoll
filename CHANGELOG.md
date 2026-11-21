@@ -12,6 +12,12 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - Local PostgreSQL 17 database in Docker (`docker-compose.yml`, `.env.example`).
 - EF Core with PostgreSQL: `KemiKollDbContext` and table mappings for products and safety data sheets.
 - `KemiKoll.Infrastructure.Tests` with tests for the database mapping.
+- EF Core migrations: `InitialCreate`, `dotnet ef` tool pinned in `.config/dotnet-tools.json`, CI check for missing migrations. (#20)
+- **The app stores products and data sheets in PostgreSQL** when the connection string `KemiKoll` is set (User Secrets in Development); otherwise in memory.
+- Integration tests against a real PostgreSQL container (Testcontainers).
+
+### Changed
+- Example data is only added when the inventory is empty.
 
 ## [0.3.0] - 2026-11-19
 
