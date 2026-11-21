@@ -7,6 +7,13 @@ and the project uses [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Read the text of PDF files (`IPdfTextReader`, PdfPig 0.1.16) with limits for untrusted uploads: 20 MB, 100 pages.
+
+## [0.4.0] - 2026-11-21
+
+Data is stored in PostgreSQL and survives a restart.
+
+### Added
 - README, contributing guide, roadmap, changelog and architecture decision records.
 - GNU AGPL v3 license.
 - Local PostgreSQL 17 database in Docker (`docker-compose.yml`, `.env.example`).
@@ -49,6 +56,7 @@ The domain model: all business rules, no database or UI.
 - Clean Architecture solution on .NET 10, xUnit tests with architecture rules,
   shared build rules, GitHub Actions CI and branch protection. (#1–#6)
 
-[Unreleased]: https://github.com/aobeid1979/KemiKoll/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/aobeid1979/KemiKoll/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/aobeid1979/KemiKoll/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/aobeid1979/KemiKoll/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/aobeid1979/KemiKoll/releases/tag/v0.2.0
