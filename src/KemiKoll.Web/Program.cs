@@ -1,7 +1,6 @@
 using KemiKoll.Application.Products;
 using KemiKoll.Application.SafetyDataSheets;
-using KemiKoll.Infrastructure.Products;
-using KemiKoll.Infrastructure.SafetyDataSheets;
+using KemiKoll.Infrastructure;
 using KemiKoll.Web.Components;
 using KemiKoll.Web.Development;
 
@@ -12,10 +11,10 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 // Composition root: this is the only place that connects interfaces to implementations.
-// Storage: temporary in-memory repository, one shared instance for the whole app.
-// It is replaced by the database implementation in a later step; nothing else changes.
-builder.Services.AddSingleton<IProductRepository, InMemoryProductRepository>();
-builder.Services.AddSingleton<ISafetyDataSheetRepository, InMemorySafetyDataSheetRepository>();
+// Storage: PostgreSQL when the connection string "KemiKoll" is configured
+// (in Development: User Secrets), otherwise in memory (data is lost on restart).
+var connectionString = builder.Configuration.GetConnectionString("KemiKoll");
+builder.Services.AddInfrastructure(connectionString);
 
 // The real system clock. Use cases ask TimeProvider for "today" so tests can use a fixed date.
 builder.Services.AddSingleton(TimeProvider.System);
@@ -26,6 +25,10 @@ builder.Services.AddScoped<ListProducts>();
 builder.Services.AddScoped<AddSafetyDataSheet>();
 
 var app = builder.Build();
+
+app.Logger.LogInformation(
+    "Storage: {Storage}",
+    string.IsNullOrWhiteSpace(connectionString) ? "in memory (data is lost on restart)" : "PostgreSQL");
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
