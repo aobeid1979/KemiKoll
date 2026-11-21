@@ -13,6 +13,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Changed
 - `AddProduct` can save a data sheet together with the product; the data sheet is validated before anything is saved.
+- Data sheet extraction tested with real files and improved: dates with month names ("25 January 2021", "25 januari 2021"), more revision-date labels ("Effective date", "Date of latest revision", "Senast reviderad" …), "Product identifier" as fallback for the name, supplier chosen by company-name ending (AB, Ltd., GmbH …), table layouts with label and value on one line.
+- New warnings: document is not a safety data sheet (e.g. a technical data sheet); no H-codes in section 2.
+
+### Fixed
+- Words like "supplier's" in running text were taken as the supplier label.
 
 ## [0.4.0] - 2026-11-21
 
