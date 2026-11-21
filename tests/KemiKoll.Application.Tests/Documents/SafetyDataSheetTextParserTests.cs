@@ -158,7 +158,8 @@ public class SafetyDataSheetTextParserTests
     [Fact]
     public void Parse_NoSection2_UsesWholeTextAndWarns()
     {
-        var result = SafetyDataSheetTextParser.Parse("Revisionsdatum: 2024-01-01\nH225 H319");
+        var result = SafetyDataSheetTextParser.Parse(
+            "SECTION 1: Identification\nRevision date: 2024-01-01\nH225 H319\nSECTION 4: First aid\nSECTION 5: Fire");
 
         string[] expected = ["H225", "H319"];
         Assert.Equal(expected, result.HazardCodes);
@@ -197,5 +198,122 @@ public class SafetyDataSheetTextParserTests
         var result = SafetyDataSheetTextParser.Parse("Supplier: Smith, Jones & Co\nSECTION 2: Hazards identification");
 
         Assert.Equal("Smith, Jones & Co", result.Supplier);
+    }
+
+    // ----- Found with real data sheets (structure only; names and text are fictional) -----
+
+    // North American (WHMIS/OSHA) layout as extracted from a two-column table:
+    // all labels first, then all values. Hazard statements are written as text, without codes.
+    private const string NorthAmericanSheetLabelsFirst = """
+        Safety Data Sheet
+        Section 1. Identification
+        Version: 8
+        Effective Date: 25 January 2021
+
+        Product Identifier
+
+        Parts Cleaner
+
+        Other Means Of
+        Identification
+        Initial Supplier
+        Identifier
+
+        Mineral spirits
+        Example Solvents Ltd.
+        100 – 1 Street SE
+        Section 2. Hazard Identification
+        Signal Word Danger
+        Hazard Statement Flammable liquid and vapour. Causes skin irritation.
+        Section 3. Composition / Information on Ingredients
+        Section 16. Other Information
+        Date Prepared: 4 October, 2012
+        """;
+
+    // The same sheet when the text keeps the table rows: label and value on one line.
+    private const string NorthAmericanSheetRows = """
+        Safety Data Sheet
+        Section 1. Identification
+        Product Identifier    Parts Cleaner                       Version: 8
+                                                                  Effective Date: 25 January 2021
+        Initial Supplier        Example Solvents Ltd.
+        Identifier              100 – 1 Street SE
+        Section 2. Hazard Identification
+        Hazard Statement        Flammable liquid and vapour.
+        Section 3. Composition / Information on Ingredients
+        """;
+
+    [Theory]
+    [InlineData(NorthAmericanSheetLabelsFirst)]
+    [InlineData(NorthAmericanSheetRows)]
+    public void Parse_NorthAmericanSheet_FindsNameSupplierAndDate(string text)
+    {
+        var result = SafetyDataSheetTextParser.Parse(text);
+
+        Assert.Equal("Parts Cleaner", result.ProductName);
+        Assert.Equal("Example Solvents Ltd.", result.Supplier);
+        Assert.Equal(new DateOnly(2021, 1, 25), result.RevisionDate);
+        Assert.Equal("en", result.LanguageCode);
+    }
+
+    [Fact]
+    public void Parse_HazardTextWithoutCodes_WarnsToEnterCodes()
+    {
+        var result = SafetyDataSheetTextParser.Parse(NorthAmericanSheetLabelsFirst);
+
+        Assert.Empty(result.HazardCodes);
+        Assert.Contains(result.Warnings, w => w.Contains("No H-codes were found in section 2", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Parse_TechnicalDataSheet_IsFlaggedAsNotASafetyDataSheet()
+    {
+        // A technical (product) data sheet has properties and specifications, but not the 16 sections.
+        const string technicalDataSheet = """
+            METHANOL TECHNICAL DATA SHEET
+            CAS No: 67-56-1
+            TYPICAL PROPERTIES: Boiling point 64.6 °C, flash point 12 °C
+            HAZARDS & PRECAUTIONS: Flammable. Toxic if swallowed. Refer to the supplier's Safety Data Sheet.
+            """;
+
+        var result = SafetyDataSheetTextParser.Parse(technicalDataSheet);
+
+        Assert.Contains(result.Warnings, w => w.StartsWith("This does not look like a safety data sheet", StringComparison.Ordinal));
+        Assert.DoesNotContain(result.Warnings, w => w.StartsWith("Section 2", StringComparison.Ordinal));
+        Assert.Null(result.Supplier); // "supplier's" in running text is not a label
+    }
+
+    [Theory]
+    [InlineData("Revision date: 25 January 2021", 2021, 1, 25)]
+    [InlineData("Date of latest revision: 4 October, 2012", 2012, 10, 4)]
+    [InlineData("Revised: January 25, 2021", 2021, 1, 25)]
+    [InlineData("Revisionsdatum: 25 januari 2021", 2021, 1, 25)]
+    [InlineData("Revisionsdatum: 3 okt. 2024", 2024, 10, 3)]
+    [InlineData("Senast reviderad 12 maj 2023", 2023, 5, 12)]
+    public void Parse_FindsDatesWithMonthNames(string line, int year, int month, int day)
+    {
+        Assert.Equal(new DateOnly(year, month, day), SafetyDataSheetTextParser.Parse(line).RevisionDate);
+    }
+
+    [Theory]
+    [InlineData("Revision date: 31 February 2021")]
+    [InlineData("Revision date: page 2 of 2021")]
+    public void Parse_InvalidNamedDate_IsIgnored(string line)
+    {
+        Assert.Null(SafetyDataSheetTextParser.Parse(line).RevisionDate);
+    }
+
+    [Fact]
+    public void Parse_EffectiveDate_PreferredOverDatePrepared()
+    {
+        Assert.Equal(new DateOnly(2021, 1, 25), SafetyDataSheetTextParser.Parse(NorthAmericanSheetLabelsFirst).RevisionDate);
+    }
+
+    [Fact]
+    public void Parse_ProductNameLabel_PreferredOverProductIdentifierHeading()
+    {
+        var result = SafetyDataSheetTextParser.Parse("1.1 Product identifier\nProduct name: Degreaser X\nSECTION 2: Hazards identification");
+
+        Assert.Equal("Degreaser X", result.ProductName);
     }
 }
