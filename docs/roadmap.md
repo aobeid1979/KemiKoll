@@ -27,8 +27,8 @@ The order puts something visible on screen early, then makes it real step by ste
 Data survives a restart. The screens do not change.
 - [x] Local PostgreSQL database for development (Docker)
 - [x] EF Core: database context and table mappings for products and data sheets
-- [ ] Database migrations
-- [ ] Use the database instead of in-memory storage
+- [x] Database migrations (#20)
+- [x] Use the database instead of in-memory storage
 
 ## v0.5.0 — PDF upload and AI extraction
 The main feature: upload a safety data sheet, and the product is filled in.
