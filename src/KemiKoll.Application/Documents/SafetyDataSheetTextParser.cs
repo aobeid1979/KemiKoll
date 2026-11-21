@@ -36,7 +36,22 @@ public static partial class SafetyDataSheetTextParser
         ArgumentNullException.ThrowIfNull(text);
 
         var warnings = new List<string>();
-        var (section1, section2) = SplitSections(text, warnings);
+
+        // A real safety data sheet has 16 numbered sections. A technical data sheet or a
+        // product sheet does not, and must not be used in its place.
+        var looksLikeSafetyDataSheet = CountSectionHeadings(text) >= MinSectionHeadings;
+        if (!looksLikeSafetyDataSheet)
+        {
+            warnings.Add("This does not look like a safety data sheet: its numbered sections (1–16) were not found. A technical data sheet or product sheet is not enough; ask the supplier for the safety data sheet.");
+        }
+
+        var (section1, section2, section2Found) = SplitSections(text, warnings, looksLikeSafetyDataSheet);
+        var hazardCodes = FindHazardCodes(section2);
+
+        if (section2Found && hazardCodes.Count == 0)
+        {
+            warnings.Add("No H-codes were found in section 2. Some data sheets, for example from outside the EU, write only the hazard text. If the product is classified as hazardous, enter the codes by hand.");
+        }
 
         var revisionDate = FindRevisionDate(text);
         if (revisionDate is null)
@@ -44,27 +59,48 @@ public static partial class SafetyDataSheetTextParser
             warnings.Add("No revision date was found. Enter it from the data sheet.");
         }
 
-        var pictogramCodes = FindPictogramCodes(section2);
-
         return new SafetyDataSheetExtraction(
-            ProductName: FindLabelValue(section1, ProductNameLabels()),
-            Supplier: WithoutAddress(FindLabelValue(section1, SupplierLabels())),
+            ProductName: FindProductName(section1),
+            Supplier: WithoutAddress(FindSupplier(section1)),
             RevisionDate: revisionDate,
             LanguageCode: DetectLanguage(text),
-            HazardCodes: FindHazardCodes(section2),
-            PictogramCodes: pictogramCodes,
+            HazardCodes: hazardCodes,
+            PictogramCodes: FindPictogramCodes(section2),
             Warnings: warnings);
     }
 
-    // Returns (text before section 2, text of section 2).
-    // If section 2 cannot be found, the whole text is used for both, with a warning.
-    private static (string Section1, string Section2) SplitSections(string text, List<string> warnings)
+    // Fewer numbered section headings than this means the document is not a safety data sheet.
+    private const int MinSectionHeadings = 3;
+
+    private static int CountSectionHeadings(string text) =>
+        SectionHeadingNumber().Matches(text)
+            .Select(match => int.Parse(match.Groups["number"].Value, CultureInfo.InvariantCulture))
+            .Where(number => number is >= 1 and <= 16)
+            .Distinct()
+            .Count();
+
+    // The specific labels first ("Product name: X"); the general heading
+    // ("Product identifier" followed by the name) only when they are missing.
+    private static string? FindProductName(string section1) =>
+        FindLabelValue(section1, ProductNameLabels()) ?? FindLabelValue(section1, ProductIdentifierLabels());
+
+    // Returns (text before section 2, text of section 2, whether section 2 was found).
+    // If section 2 cannot be found, the whole text is used for both.
+    private static (string Section1, string Section2, bool Section2Found) SplitSections(
+        string text,
+        List<string> warnings,
+        bool looksLikeSafetyDataSheet)
     {
         var section2 = Section2Heading().Match(text);
         if (!section2.Success)
         {
-            warnings.Add("Section 2 (hazards identification) was not found. The hazard codes were taken from the whole document and may include ingredients; check them carefully.");
-            return (text, text);
+            // Not repeated for documents already flagged as "not a safety data sheet".
+            if (looksLikeSafetyDataSheet)
+            {
+                warnings.Add("Section 2 (hazards identification) was not found. The hazard codes were taken from the whole document and may include ingredients; check them carefully.");
+            }
+
+            return (text, text, false);
         }
 
         var section3 = Section3Heading().Match(text, section2.Index + section2.Length);
@@ -74,7 +110,7 @@ public static partial class SafetyDataSheetTextParser
             warnings.Add("Section 3 was not found, so the end of section 2 is uncertain. Check the hazard codes.");
         }
 
-        return (text[..section2.Index], text[section2.Index..section2End]);
+        return (text[..section2.Index], text[section2.Index..section2End], true);
     }
 
     private static List<string> FindHazardCodes(string section)
@@ -117,10 +153,80 @@ public static partial class SafetyDataSheetTextParser
         {
             // The date follows the label on the same line or the next one.
             var rest = text.Substring(label.Index + label.Length, Math.Min(60, text.Length - label.Index - label.Length));
-            var date = DateValue().Match(rest);
-            if (date.Success && TryParseDate(date.Value, out var value))
+            if (FindFirstDate(rest) is { } date)
             {
-                return value;
+                return date;
+            }
+        }
+
+        return null;
+    }
+
+    // Numeric dates ("2025-03-10", "10.03.2025") and dates with month names
+    // ("25 January 2021", "4 October, 2012", "January 25, 2021", "25 januari 2021").
+    // Returns the date that appears first.
+    private static DateOnly? FindFirstDate(string text)
+    {
+        var candidates = new List<(int Index, DateOnly Date)>();
+
+        var numeric = DateValue().Match(text);
+        if (numeric.Success && TryParseDate(numeric.Value, out var numericDate))
+        {
+            candidates.Add((numeric.Index, numericDate));
+        }
+
+        // Several words can look like "<number> <word> <year>"; the first with a real month name counts.
+        foreach (Match named in NamedMonthDate().Matches(text))
+        {
+            if (TryParseNamedDate(named, out var namedDate))
+            {
+                candidates.Add((named.Index, namedDate));
+                break;
+            }
+        }
+
+        return candidates.Count == 0 ? null : candidates.MinBy(candidate => candidate.Index).Date;
+    }
+
+    private static bool TryParseNamedDate(Match match, out DateOnly date)
+    {
+        date = default;
+        var day = match.Groups["day1"].Success ? match.Groups["day1"].Value : match.Groups["day2"].Value;
+        var monthName = match.Groups["month1"].Success ? match.Groups["month1"].Value : match.Groups["month2"].Value;
+
+        if (MonthNumber(monthName) is not { } month
+            || !int.TryParse(day, CultureInfo.InvariantCulture, out var dayNumber)
+            || !int.TryParse(match.Groups["year"].Value, CultureInfo.InvariantCulture, out var year)
+            || year < 1900 || year > 2100
+            || dayNumber < 1 || dayNumber > DateTime.DaysInMonth(year, month))
+        {
+            return false;
+        }
+
+        date = new DateOnly(year, month, dayNumber);
+        return true;
+    }
+
+    // English and Swedish month names; the first three letters are enough ("Jan", "okt.").
+    private static readonly string[][] MonthNames =
+    [
+        ["jan"], ["feb"], ["mar"], ["apr"], ["may", "maj"], ["jun"],
+        ["jul"], ["aug"], ["sep"], ["oct", "okt"], ["nov"], ["dec"],
+    ];
+
+    private static int? MonthNumber(string name)
+    {
+        if (name.Length < 3)
+        {
+            return null;
+        }
+
+        var start = name[..3];
+        for (var i = 0; i < MonthNames.Length; i++)
+        {
+            if (MonthNames[i].Any(prefix => string.Equals(prefix, start, StringComparison.OrdinalIgnoreCase)))
+            {
+                return i + 1;
             }
         }
 
@@ -155,11 +261,13 @@ public static partial class SafetyDataSheetTextParser
             return null;
         }
 
-        var value = match.Groups["value"].Value.Trim();
+        // In table-like layouts the next column follows on the same line after a wide gap
+        // ("Product Identifier    Solvent        Version: 8"); keep only the first column.
+        var value = ColumnGap().Split(match.Groups["value"].Value.Trim())[0];
         if (value.Length == 0)
         {
             var nextLine = NextNonEmptyLine().Match(section, match.Index + match.Length);
-            value = nextLine.Success ? nextLine.Groups["line"].Value.Trim() : string.Empty;
+            value = nextLine.Success ? ColumnGap().Split(nextLine.Groups["line"].Value.Trim())[0] : string.Empty;
         }
 
         value = value.Trim(' ', ':', '-', '–', '\t');
@@ -170,6 +278,51 @@ public static partial class SafetyDataSheetTextParser
 
         return value.Length > MaxTextValueLength ? value[..MaxTextValueLength] : value;
     }
+
+    // The supplier label is sometimes followed by other lines first (another field's value in a
+    // two-column table, or an address). Among the first few lines after the label, prefer one that
+    // looks like a company name ("… AB", "… Ltd.", "… GmbH"); otherwise take the first.
+    private static string? FindSupplier(string section1)
+    {
+        var match = SupplierLabels().Match(section1);
+        if (!match.Success)
+        {
+            return null;
+        }
+
+        var candidates = new List<string>();
+        var sameLine = CleanValue(match.Groups["value"].Value);
+        if (sameLine.Length > 0)
+        {
+            candidates.Add(sameLine);
+        }
+
+        var position = match.Index + match.Length;
+        while (candidates.Count < SupplierCandidateLines)
+        {
+            var nextLine = NextNonEmptyLine().Match(section1, position);
+            if (!nextLine.Success)
+            {
+                break;
+            }
+
+            candidates.Add(CleanValue(nextLine.Groups["line"].Value));
+            position = nextLine.Index + nextLine.Length;
+        }
+
+        var supplier = candidates.FirstOrDefault(candidate => CompanySuffix().IsMatch(candidate))
+            ?? candidates.FirstOrDefault(candidate => candidate.Length > 0);
+
+        return supplier is null or "" ? null : Truncate(supplier);
+    }
+
+    private const int SupplierCandidateLines = 4;
+
+    private static string CleanValue(string value) =>
+        ColumnGap().Split(value.Trim())[0].Trim(' ', ':', '-', '–', '\t');
+
+    private static string Truncate(string value) =>
+        value.Length > MaxTextValueLength ? value[..MaxTextValueLength] : value;
 
     // "Example Chemicals Ltd, 1 Lab Road, London" → "Example Chemicals Ltd".
     // Only cut when the rest contains a digit (street number, postcode), so names with commas survive.
@@ -202,30 +355,60 @@ public static partial class SafetyDataSheetTextParser
     private static partial Regex PictogramCode();
 
     [GeneratedRegex(
-        @"Revisionsdatum|Datum\s+för\s+revidering|Omarbetad|Reviderad|Revision\s*date|Date\s+of\s+revision|Revised(?:\s+on)?",
+        @"Revisionsdatum|Datum\s+för\s+revidering|Ändringsdatum|Senast\s+(?:ändrad|reviderad)|Omarbetad|Reviderad|Revision\s*date|Date\s+of\s+(?:the\s+)?(?:latest\s+|last\s+)?revision|Last\s+revised|Revised(?:\s+on)?|Effective\s+date",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex RevisionDateLabels();
 
     [GeneratedRegex(
-        @"Utfärdandedatum|Utgivningsdatum|Upprättad|Datum\s+för\s+utfärdande|Issue\s*date|Date\s+of\s+issue|Date\s+of\s+compilation",
+        @"Utfärdandedatum|Utgivningsdatum|Upprättad|Utarbetad|Datum\s+för\s+utfärdande|Issue\s*date|Date\s+of\s+issue|Date\s+of\s+compilation|Date\s+prepared|Prepared\s+on",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex IssueDateLabels();
 
     [GeneratedRegex(@"\d{4}-\d{1,2}-\d{1,2}|\d{1,2}[./-]\d{1,2}[./-]\d{4}|\d{4}\.\d{2}\.\d{2}", RegexOptions.CultureInvariant)]
     private static partial Regex DateValue();
 
+    // "25 January 2021", "4 October, 2012", "25 jan. 2021", "25 januari 2021" or "January 25, 2021".
     [GeneratedRegex(
-        @"^[ \t]*(?:1\.1[ \t]*)?(?:Handelsnamn|Produktnamn|Trade[ \t]+name|Product[ \t]+name)[ \t]*[:\-–]?[ \t]*(?<value>[^\r\n]*)\r?$",
+        @"(?:(?<day1>\d{1,2})\.?\s+(?<month1>[A-Za-zÅÄÖåäö]{3,9})\.?,?|(?<month2>[A-Za-zÅÄÖåäö]{3,9})\.?\s+(?<day2>\d{1,2}),?)\s+(?<year>\d{4})",
+        RegexOptions.CultureInvariant)]
+    private static partial Regex NamedMonthDate();
+
+    // A tab or three or more spaces: the gap between two columns of a table-like layout.
+    [GeneratedRegex(@"\t|[ ]{3,}", RegexOptions.CultureInvariant)]
+    private static partial Regex ColumnGap();
+
+    // Numbered section headings: "AVSNITT 3:", "SECTION 3.", "Section 12. Ecological information".
+    [GeneratedRegex(
+        @"^[ \t]*(?:AVSNITT|SECTION)[ \t]*(?<number>\d{1,2})(?!\.?\d)",
+        RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant)]
+    private static partial Regex SectionHeadingNumber();
+
+    [GeneratedRegex(
+        @"^[ \t]*(?:1\.1[ \t]*)?(?:Handelsnamn|Produktnamn|Trade[ \t]+name|Product[ \t]+name)(?![\p{L}'’])[ \t]*[:\-–]?[ \t]*(?<value>[^\r\n]*)\r?$",
         RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant)]
     private static partial Regex ProductNameLabels();
 
+    // General heading of section 1.1; the name follows on the same line or the next one.
     [GeneratedRegex(
-        @"^[ \t]*(?:Leverantör|Supplier|Tillverkare|Manufacturer|Företag|Company(?:[ \t]+name)?)[ \t]*[:\-–]?[ \t]*(?<value>[^\r\n]*)\r?$",
+        @"^[ \t]*(?:1\.1[ \t]*)?(?:Product[ \t]+identifier|Produktbeteckning|Produktidentifierare)(?![\p{L}'’])[ \t]*[:\-–]?[ \t]*(?<value>[^\r\n]*)\r?$",
+        RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant)]
+    private static partial Regex ProductIdentifierLabels();
+
+    // "Initial Supplier Identifier" (North American sheets) may be split over two lines.
+    // The label must end at a word boundary, so "supplier's" in running text is not a label.
+    [GeneratedRegex(
+        @"^[ \t]*(?:(?:Initial\s+)?Supplier(?:\s+identifier)?|Leverantör|Tillverkare|Manufacturer|Företag|Company(?:[ \t]+name)?)(?![\p{L}'’])[ \t]*[:\-–]?[ \t]*(?<value>[^\r\n]*)\r?$",
         RegexOptions.IgnoreCase | RegexOptions.Multiline | RegexOptions.CultureInvariant)]
     private static partial Regex SupplierLabels();
 
     [GeneratedRegex(@"\G\s*?\r?\n[ \t]*(?<line>[^\r\n]*\S[^\r\n]*)", RegexOptions.CultureInvariant)]
     private static partial Regex NextNonEmptyLine();
+
+    // Legal-form endings of company names in Sweden, the Nordics, the EU, the UK and North America.
+    [GeneratedRegex(
+        @"(?<![\p{L}])(?:AB|HB|KB|Oy|Oyj|AS|ASA|A/S|ApS|GmbH|AG|KG|S\.?A\.?|S\.?r\.?l\.?|S\.?p\.?A\.?|B\.?V\.?|N\.?V\.?|Ltd\.?|Limited|plc|Inc\.?|LLC|Corp\.?|Corporation|Co\.)(?![\p{L}])",
+        RegexOptions.CultureInvariant)]
+    private static partial Regex CompanySuffix();
 
     [GeneratedRegex(@"\b(?:AVSNITT|Säkerhetsdatablad|Farliga\s+egenskaper|Leverantör|Faroangivelser)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex SwedishWords();
