@@ -1,5 +1,7 @@
+using KemiKoll.Application.Documents;
 using KemiKoll.Application.Products;
 using KemiKoll.Application.SafetyDataSheets;
+using KemiKoll.Infrastructure.Documents;
 using KemiKoll.Infrastructure.Products;
 using KemiKoll.Infrastructure.SafetyDataSheets;
 
@@ -32,5 +34,15 @@ public class DependencyInjectionTests
 
         Assert.IsType<EfProductRepository>(scope.ServiceProvider.GetRequiredService<IProductRepository>());
         Assert.IsType<EfSafetyDataSheetRepository>(scope.ServiceProvider.GetRequiredService<ISafetyDataSheetRepository>());
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("Host=localhost;Database=kemikoll;Username=kemikoll;Password=unused")]
+    public void AddInfrastructure_AlwaysRegistersPdfReader(string? connectionString)
+    {
+        using var provider = new ServiceCollection().AddInfrastructure(connectionString).BuildServiceProvider();
+
+        Assert.IsType<PdfPigTextReader>(provider.GetRequiredService<IPdfTextReader>());
     }
 }
