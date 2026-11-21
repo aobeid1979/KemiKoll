@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 
 using KemiKoll.Application.Documents;
@@ -62,15 +63,68 @@ public class PdfPigTextReaderTests
         Assert.True(first >= 0 && first < second && second < third, page);
     }
 
+    /// <summary>
+    /// Writes a one-page PDF by hand with the WinAnsi (Western European) encoding, which many
+    /// Swedish PDFs use for å, ä and ö. PdfPig's own builder cannot write these letters with its
+    /// built-in fonts, so this small writer is used for the Swedish-character test only.
+    /// </summary>
+    private static MemoryStream CreateWinAnsiPdf(params string[] lines)
+    {
+        static string Escape(string text) =>
+            text.Replace("\\", "\\\\", StringComparison.Ordinal)
+                .Replace("(", "\\(", StringComparison.Ordinal)
+                .Replace(")", "\\)", StringComparison.Ordinal);
+
+        var content = new StringBuilder("BT /F1 11 Tf 50 780 Td");
+        foreach (var line in lines)
+        {
+            content.Append(CultureInfo.InvariantCulture, $" ({Escape(line)}) Tj 0 -20 Td");
+        }
+
+        content.Append(" ET");
+        var contentBytes = Encoding.Latin1.GetBytes(content.ToString());
+
+        string[] objects =
+        [
+            "<< /Type /Catalog /Pages 2 0 R >>",
+            "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+            "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+            $"<< /Length {contentBytes.Length} >>\nstream\n{Encoding.Latin1.GetString(contentBytes)}\nendstream",
+        ];
+
+        // A PDF ends with a table of the byte position of every object (xref).
+        var pdf = new StringBuilder("%PDF-1.4\n");
+        var offsets = new List<int>();
+        for (var i = 0; i < objects.Length; i++)
+        {
+            offsets.Add(pdf.Length);
+            pdf.Append(CultureInfo.InvariantCulture, $"{i + 1} 0 obj\n{objects[i]}\nendobj\n");
+        }
+
+        var xrefOffset = pdf.Length;
+        pdf.Append(CultureInfo.InvariantCulture, $"xref\n0 {objects.Length + 1}\n0000000000 65535 f \n");
+        foreach (var offset in offsets)
+        {
+            pdf.Append(CultureInfo.InvariantCulture, $"{offset:D10} 00000 n \n");
+        }
+
+        pdf.Append(CultureInfo.InvariantCulture, $"trailer\n<< /Size {objects.Length + 1} /Root 1 0 R >>\nstartxref\n{xrefOffset}\n%%EOF\n");
+
+        // Latin-1 writes one byte per character, so the string positions above are byte positions.
+        return new MemoryStream(Encoding.Latin1.GetBytes(pdf.ToString()));
+    }
+
     [Fact]
     public async Task ReadAsync_ReadsSwedishCharacters()
     {
-        using var pdf = CreatePdf(["Säkerhetsdatablad – Avsnitt 2: Farliga egenskaper", "Leverantör: Exempel Kemi AB"]);
+        using var pdf = CreateWinAnsiPdf("Säkerhetsdatablad - Avsnitt 2: Farliga egenskaper", "Leverantör: Exempel Kemi AB, Åmål");
 
         var text = await _reader.ReadAsync(pdf);
 
         Assert.Contains("Säkerhetsdatablad", text.FullText, StringComparison.Ordinal);
         Assert.Contains("Leverantör", text.FullText, StringComparison.Ordinal);
+        Assert.Contains("Åmål", text.FullText, StringComparison.Ordinal);
     }
 
     [Fact]
