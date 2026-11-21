@@ -18,6 +18,8 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 - Words like "supplier's" in running text were taken as the supplier label.
+- Supplier is now found under the section 1.3 heading when there is no "Supplier:" label (common in Swedish data sheets).
+- A second field on the same line ("Solvent Version: 8") is no longer added to the product name.
 
 ## [0.4.0] - 2026-11-21
 

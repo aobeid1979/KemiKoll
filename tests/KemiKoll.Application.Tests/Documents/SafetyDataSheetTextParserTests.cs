@@ -316,4 +316,46 @@ public class SafetyDataSheetTextParserTests
 
         Assert.Equal("Degreaser X", result.ProductName);
     }
+
+    [Fact]
+    public void Parse_SupplierWithoutLabel_IsTakenFromSection13()
+    {
+        // Structure of a real Swedish data sheet (names fictional): no "Leverantör:" label,
+        // the company name is the first line under the 1.3 heading, followed by the address
+        // and a Swedish national contact.
+        const string sheet = """
+            AVSNITT 1: Namnet på ämnet/blandningen och bolaget/företaget
+            1.1 Produktbeteckning
+            Handelsnamn
+
+            : Exempelbensin
+
+            1.3 Närmare upplysningar om den som tillhandahåller säkerhetsdatablad
+            Exempelfärg Denmark A/S
+            Exempelvej 1
+            DK-2610 Rødovre
+            Nationell kontakt
+            Exempelfärg Sweden AB
+            1.4 Telefonnummer för nödsituationer
+            AVSNITT 2: Farliga egenskaper
+            H225
+            AVSNITT 3: Sammansättning/information om beståndsdelar
+            """;
+
+        var result = SafetyDataSheetTextParser.Parse(sheet);
+
+        Assert.Equal("Exempelbensin", result.ProductName);
+        Assert.Equal("Exempelfärg Denmark A/S", result.Supplier);
+    }
+
+    [Theory]
+    [InlineData("Product Identifier Parts Cleaner Version: 8", "Parts Cleaner")]
+    [InlineData("Product name: Parts Cleaner Revision date: 2021-01-25", "Parts Cleaner")]
+    [InlineData("Handelsnamn: Bensin 95 E10", "Bensin 95 E10")]
+    public void Parse_SecondFieldOnSameLine_IsNotPartOfTheName(string line, string expected)
+    {
+        var result = SafetyDataSheetTextParser.Parse(line + "\nSECTION 2: Hazards identification");
+
+        Assert.Equal(expected, result.ProductName);
+    }
 }
