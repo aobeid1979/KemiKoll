@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 
 using KemiKoll.Domain.Hazards;
 
-namespace KemiKoll.Web.Components.Shared;
+namespace KemiKoll.Web.Components.Common;
 
 /// <summary>
 /// Readable names for GHS pictograms, used as labels and tooltips in the UI.

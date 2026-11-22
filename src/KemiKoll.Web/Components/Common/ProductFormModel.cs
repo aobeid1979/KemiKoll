@@ -1,6 +1,6 @@
 using KemiKoll.Domain.Hazards;
 
-namespace KemiKoll.Web.Components.Shared;
+namespace KemiKoll.Web.Components.Common;
 
 /// <summary>
 /// What the user has entered in the product form. Shared by the "Add product" and
