@@ -35,10 +35,10 @@ public sealed partial class SafetyDataSheet
     public Guid ProductId { get; }
 
     /// <summary>The revision date printed on the data sheet by the supplier.</summary>
-    public DateOnly RevisionDate { get; }
+    public DateOnly RevisionDate { get; private set; }
 
     /// <summary>The language of the data sheet as a two-letter ISO 639-1 code, for example <c>sv</c> or <c>en</c>.</summary>
-    public string LanguageCode { get; }
+    public string LanguageCode { get; private set; }
 
     /// <summary>The original file name of the uploaded PDF, for example <c>degreaser-x-sds.pdf</c>.</summary>
     public string FileName { get; }
@@ -78,6 +78,30 @@ public sealed partial class SafetyDataSheet
             revisionDate,
             ValidateLanguageCode(languageCode),
             ValidateFileName(fileName));
+    }
+
+    /// <summary>
+    /// Corrects the revision date and language, for example when they were read wrongly from the PDF.
+    /// </summary>
+    /// <remarks>
+    /// This corrects a mistake in the record. A newer version from the supplier is a new
+    /// <see cref="SafetyDataSheet"/>, so the old version stays as history.
+    /// Both values are validated before anything changes.
+    /// </remarks>
+    /// <param name="revisionDate">The correct revision date.</param>
+    /// <param name="languageCode">The correct two-letter language code.</param>
+    /// <exception cref="ArgumentException">The date is missing or the language code is not valid.</exception>
+    public void Correct(DateOnly revisionDate, string languageCode)
+    {
+        if (revisionDate == default)
+        {
+            throw new ArgumentException("A revision date is required.", nameof(revisionDate));
+        }
+
+        var validLanguageCode = ValidateLanguageCode(languageCode);
+
+        RevisionDate = revisionDate;
+        LanguageCode = validLanguageCode;
     }
 
     /// <summary>
