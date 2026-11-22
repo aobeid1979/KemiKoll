@@ -31,4 +31,14 @@ public sealed class EfSafetyDataSheetRepository(IDbContextFactory<KemiKollDbCont
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
         return await context.SafetyDataSheets.AsNoTracking().ToListAsync(cancellationToken).ConfigureAwait(false);
     }
+
+    /// <inheritdoc />
+    public async Task DeleteForProductAsync(Guid productId, CancellationToken cancellationToken = default)
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        await context.SafetyDataSheets
+            .Where(sheet => sheet.ProductId == productId)
+            .ExecuteDeleteAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
 }
