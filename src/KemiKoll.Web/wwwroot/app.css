@@ -45,3 +45,154 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+
+
+/* ---- Product form (shared by the Add and Edit pages and ProductFormFields) ---- */
+/* Every rule is limited to .product-form, so it cannot affect other pages. */
+
+/* Styles for the "Add product" form only (Blazor scoped CSS). */
+
+.product-form {
+    max-width: 640px;
+}
+
+.product-form .field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-bottom: 1.1rem;
+}
+
+.product-form label,
+.product-form legend {
+    font-weight: 600;
+}
+
+.product-form input:not([type=checkbox]) {
+    padding: 0.5rem 0.6rem;
+    border: 1px solid #c9ced4;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.product-form input:not([type=checkbox]):focus {
+    outline: 2px solid #1f4e78;
+    border-color: #1f4e78;
+}
+
+.product-form small {
+    color: #666;
+}
+
+.product-form fieldset {
+    border: 1px solid #e3e3e3;
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+}
+
+.product-form .pictograms {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 0.4rem 1rem;
+}
+
+.product-form .pictogram-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: normal;
+    cursor: pointer;
+}
+
+.product-form .code {
+    padding: 0.05rem 0.4rem;
+    border: 1px solid #d33;
+    border-radius: 4px;
+    color: #a11;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 0.85rem;
+}
+
+.product-form .errors {
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid #f1b0b0;
+    border-radius: 4px;
+    background: #fde8e8;
+    color: #8a1010;
+}
+
+.product-form .errors ul {
+    margin: 0.4rem 0 0;
+    padding-left: 1.2rem;
+}
+
+.product-form .actions {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.product-form button.primary {
+    padding: 0.55rem 1.2rem;
+    border: none;
+    border-radius: 4px;
+    background: #1f4e78;
+    color: #fff;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.product-form button.primary:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.product-form select {
+    padding: 0.45rem 0.6rem;
+    border: 1px solid #c9ced4;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.product-form .warning {
+    color: #8a5a00;
+}
+
+.product-form button.link {
+    margin-left: 0.75rem;
+    padding: 0;
+    border: none;
+    background: none;
+    color: #1f4e78;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* CLP check of the pictograms against the hazard statements. */
+.product-form .pictogram-check {
+    margin-top: 0.75rem;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid #f0d49a;
+    border-radius: 4px;
+    background: #fff8e6;
+    color: #6b4700;
+}
+
+.product-form .pictogram-check p {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin: 0;
+}
+
+.product-form .pictogram-check ul {
+    margin: 0.4rem 0;
+    padding-left: 1.2rem;
+}
+
+.product-form .no-rule {
+    display: block;
+    margin-top: 0.5rem;
+    color: #6b4700;
+}

@@ -2,7 +2,6 @@
 @rendermode InteractiveServer
 @using KemiKoll.Application.Documents
 @using KemiKoll.Application.Products
-@using KemiKoll.Domain.Hazards
 @inject AddProduct AddProductUseCase
 @inject ReadSafetyDataSheet ReadSafetyDataSheetUseCase
 @inject NavigationManager Navigation
@@ -11,6 +10,7 @@
     Form to add a chemical product, by hand or filled in from a safety data sheet PDF.
     Interactive (server) rendering: upload, checkboxes, errors and the save button
     update without reloading the page.
+    The product fields and the CLP pictogram check are in ProductFormFields (shared with Edit).
     All validation happens in the use cases; this page only shows their suggestions and errors.
 *@
 
@@ -48,69 +48,7 @@
 </section>
 
 <form class="product-form" @onsubmit="SaveAsync">
-    <div class="field">
-        <label for="name">Name</label>
-        <input id="name" @bind="_name" placeholder="e.g. Acetone" autocomplete="off" />
-    </div>
-
-    <div class="field">
-        <label for="supplier">Supplier</label>
-        <input id="supplier" @bind="_supplier" placeholder="e.g. Exempel Kemi AB" autocomplete="off" />
-    </div>
-
-    <div class="field">
-        <label for="hazard-codes">Hazard statements</label>
-        <input id="hazard-codes" @bind="_hazardCodes" placeholder="e.g. H225, H319, EUH066" autocomplete="off" />
-        <small>Separate codes with commas or spaces. Leave empty if the product has none.</small>
-    </div>
-
-    <fieldset class="field">
-        <legend>Pictograms</legend>
-        <div class="pictograms">
-            @foreach (var pictogram in AllPictograms)
-            {
-                <label class="pictogram-option">
-                    <input type="checkbox"
-                           checked="@_selectedPictograms.Contains(pictogram)"
-                           @onchange="e => TogglePictogram(pictogram, (bool)e.Value!)" />
-                    <PictogramImage Code="@pictogram.ToCode()" Size="32" />
-                    <span class="code">@pictogram.ToCode()</span>
-                    @PictogramNames.DisplayName(pictogram)
-                </label>
-            }
-        </div>
-
-        @* CLP check of the ticked pictograms against the hazard statements typed above. *@
-        @{
-            var check = CheckPictograms();
-        }
-        @if (check.Missing.Count > 0 || check.Unexpected.Count > 0)
-        {
-            <div class="pictogram-check" role="status">
-                <p>According to CLP, these H-codes require:
-                    @foreach (var required in check.Requirement.Required)
-                    {
-                        <PictogramImage Code="@required.ToCode()" Size="24" />
-                    }
-                </p>
-                <ul>
-                    @if (check.Missing.Count > 0)
-                    {
-                        <li>Missing: @string.Join(", ", check.Missing.Select(p => $"{p.ToCode()} {PictogramNames.DisplayName(p)}"))</li>
-                    }
-                    @if (check.Unexpected.Count > 0)
-                    {
-                        <li>Not expected: @string.Join(", ", check.Unexpected.Select(p => $"{p.ToCode()} {PictogramNames.DisplayName(p)}"))</li>
-                    }
-                </ul>
-                <button type="button" class="link" @onclick="() => UseRequiredPictograms(check.Requirement)">Use the pictograms that match the H-codes</button>
-            </div>
-        }
-        @if (check.Requirement.CodesWithoutRule.Count > 0)
-        {
-            <small class="no-rule">No pictogram rule for @string.Join(", ", check.Requirement.CodesWithoutRule); check these pictograms in the data sheet.</small>
-        }
-    </fieldset>
+    <ProductFormFields Model="_form" />
 
     @if (_dataSheetFileName is not null)
     {
@@ -164,22 +102,14 @@
 </form>
 
 @code {
-    private static readonly Pictogram[] AllPictograms = Enum.GetValues<Pictogram>();
-
-    // Characters allowed between hazard codes: comma, semicolon and any whitespace (including new lines).
-    private static readonly char[] CodeSeparators = [',', ';', ' ', '\t', '\r', '\n'];
-
     // The same limit as the PDF reader; the browser stops sending larger files early.
     private const long MaxUploadBytes = 20 * 1024 * 1024;
 
     private static readonly (string Code, string Name)[] Languages =
         [("sv", "Swedish"), ("en", "English"), ("no", "Norwegian"), ("da", "Danish"), ("fi", "Finnish"), ("de", "German")];
 
-    private readonly HashSet<Pictogram> _selectedPictograms = [];
+    private readonly ProductFormModel _form = new();
     private IReadOnlyList<string> _errors = [];
-    private string _name = string.Empty;
-    private string _supplier = string.Empty;
-    private string _hazardCodes = string.Empty;
     private bool _isSaving;
 
     // Data sheet upload state. _dataSheetFileName is set once a PDF was read successfully.
@@ -226,18 +156,10 @@
     // Replaces the form contents with the suggestions. Name and supplier keep what was typed if not found.
     private void Fill(SafetyDataSheetExtraction extraction, string fileName)
     {
-        _name = extraction.ProductName ?? _name;
-        _supplier = extraction.Supplier ?? _supplier;
-        _hazardCodes = string.Join(", ", extraction.HazardCodes);
-
-        _selectedPictograms.Clear();
-        foreach (var pictogramCode in extraction.PictogramCodes)
-        {
-            if (PictogramCodes.TryParse(pictogramCode, out var pictogram))
-            {
-                _selectedPictograms.Add(pictogram);
-            }
-        }
+        _form.Name = extraction.ProductName ?? _form.Name;
+        _form.Supplier = extraction.Supplier ?? _form.Supplier;
+        _form.HazardCodes = string.Join(", ", extraction.HazardCodes);
+        _form.SetPictograms(extraction.PictogramCodes);
 
         _dataSheetFileName = fileName;
         _revisionDate = extraction.RevisionDate;
@@ -251,36 +173,6 @@
         _dataSheetFileName = null;
         _revisionDate = null;
         _warnings = [];
-    }
-
-    // Valid codes from the hazard-statement field; invalid ones are reported when saving.
-    private (PictogramRequirement Requirement, IReadOnlyList<Pictogram> Missing, IReadOnlyList<Pictogram> Unexpected) CheckPictograms()
-    {
-        var statements = _hazardCodes
-            .Split(CodeSeparators, StringSplitOptions.RemoveEmptyEntries)
-            .Select(code => HazardStatement.TryParse(code, out var statement) ? statement : null)
-            .OfType<HazardStatement>();
-
-        var requirement = PictogramRules.For(statements);
-        return (requirement, requirement.MissingFrom(_selectedPictograms), requirement.UnexpectedIn(_selectedPictograms));
-    }
-
-    private void UseRequiredPictograms(PictogramRequirement requirement)
-    {
-        _selectedPictograms.Clear();
-        _selectedPictograms.UnionWith(requirement.Required);
-    }
-
-    private void TogglePictogram(Pictogram pictogram, bool isChecked)
-    {
-        if (isChecked)
-        {
-            _selectedPictograms.Add(pictogram);
-        }
-        else
-        {
-            _selectedPictograms.Remove(pictogram);
-        }
     }
 
     private async Task SaveAsync()
@@ -299,11 +191,10 @@
                 : null;
 
             var command = new AddProductCommand(
-                _name,
-                _supplier,
-                _hazardCodes.Split(CodeSeparators, StringSplitOptions.RemoveEmptyEntries),
-                // Keep the official order GHS01…GHS09, whatever order the boxes were ticked in.
-                AllPictograms.Where(_selectedPictograms.Contains).Select(p => p.ToCode()).ToList(),
+                _form.Name,
+                _form.Supplier,
+                _form.HazardCodeList(),
+                _form.PictogramCodeList(),
                 dataSheet);
 
             var result = await AddProductUseCase.ExecuteAsync(command);

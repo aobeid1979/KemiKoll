@@ -1,0 +1,102 @@
+@using KemiKoll.Domain.Hazards
+
+@*
+    The product fields (name, supplier, hazard statements, pictograms) and the live CLP
+    pictogram check. Used by the "Add product" and "Edit product" pages, so both behave
+    the same. The page owns the Model and reads it when saving.
+*@
+
+<div class="field">
+    <label for="name">Name</label>
+    <input id="name" @bind="Model.Name" placeholder="e.g. Acetone" autocomplete="off" />
+</div>
+
+<div class="field">
+    <label for="supplier">Supplier</label>
+    <input id="supplier" @bind="Model.Supplier" placeholder="e.g. Exempel Kemi AB" autocomplete="off" />
+</div>
+
+<div class="field">
+    <label for="hazard-codes">Hazard statements</label>
+    <input id="hazard-codes" @bind="Model.HazardCodes" placeholder="e.g. H225, H319, EUH066" autocomplete="off" />
+    <small>Separate codes with commas or spaces. Leave empty if the product has none.</small>
+</div>
+
+<fieldset class="field">
+    <legend>Pictograms</legend>
+    <div class="pictograms">
+        @foreach (var pictogram in AllPictograms)
+        {
+            <label class="pictogram-option">
+                <input type="checkbox"
+                       checked="@Model.SelectedPictograms.Contains(pictogram)"
+                       @onchange="e => TogglePictogram(pictogram, (bool)e.Value!)" />
+                <PictogramImage Code="@pictogram.ToCode()" Size="32" />
+                <span class="code">@pictogram.ToCode()</span>
+                @PictogramNames.DisplayName(pictogram)
+            </label>
+        }
+    </div>
+
+    @* CLP check of the ticked pictograms against the hazard statements typed above. *@
+    @{
+        var requirement = Model.RequiredPictograms();
+        var missing = requirement.MissingFrom(Model.SelectedPictograms);
+        var unexpected = requirement.UnexpectedIn(Model.SelectedPictograms);
+    }
+    @if (missing.Count > 0 || unexpected.Count > 0)
+    {
+        <div class="pictogram-check" role="status">
+            <p>According to CLP, these H-codes require:
+                @foreach (var required in requirement.Required)
+                {
+                    <PictogramImage Code="@required.ToCode()" Size="24" />
+                }
+            </p>
+            <ul>
+                @if (missing.Count > 0)
+                {
+                    <li>Missing: @Describe(missing)</li>
+                }
+                @if (unexpected.Count > 0)
+                {
+                    <li>Not expected: @Describe(unexpected)</li>
+                }
+            </ul>
+            <button type="button" class="link" @onclick="() => UseRequiredPictograms(requirement)">Use the pictograms that match the H-codes</button>
+        </div>
+    }
+    @if (requirement.CodesWithoutRule.Count > 0)
+    {
+        <small class="no-rule">No pictogram rule for @string.Join(", ", requirement.CodesWithoutRule); check these pictograms in the data sheet.</small>
+    }
+</fieldset>
+
+@code {
+    private static readonly Pictogram[] AllPictograms = Enum.GetValues<Pictogram>();
+
+    /// <summary>The form values; owned by the page.</summary>
+    [Parameter, EditorRequired]
+    public ProductFormModel Model { get; set; } = default!;
+
+    private void TogglePictogram(Pictogram pictogram, bool isChecked)
+    {
+        if (isChecked)
+        {
+            Model.SelectedPictograms.Add(pictogram);
+        }
+        else
+        {
+            Model.SelectedPictograms.Remove(pictogram);
+        }
+    }
+
+    private void UseRequiredPictograms(PictogramRequirement requirement)
+    {
+        Model.SelectedPictograms.Clear();
+        Model.SelectedPictograms.UnionWith(requirement.Required);
+    }
+
+    private static string Describe(IEnumerable<Pictogram> pictograms) =>
+        string.Join(", ", pictograms.Select(p => $"{p.ToCode()} {PictogramNames.DisplayName(p)}"));
+}
