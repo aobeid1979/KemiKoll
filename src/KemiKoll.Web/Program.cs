@@ -24,6 +24,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 // Use cases: a new instance per request.
 builder.Services.AddScoped<AddProduct>();
 builder.Services.AddScoped<ListProducts>();
+builder.Services.AddScoped<EditProduct>();
 builder.Services.AddScoped<AddSafetyDataSheet>();
 builder.Services.AddScoped<ReadSafetyDataSheet>();
 
