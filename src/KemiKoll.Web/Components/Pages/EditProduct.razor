@@ -6,7 +6,7 @@
 @inject NavigationManager Navigation
 
 @*
-    Edit or delete an existing product.
+    Edit or delete an existing product, and manage its safety data sheets.
     Uses the same ProductFormFields as "Add product", so the fields and the CLP pictogram check
     behave the same. Deleting asks for confirmation on the page first.
 *@
@@ -49,6 +49,9 @@ else
             <a href="products">Cancel</a>
         </div>
     </form>
+
+    @* Saved immediately, separately from the form above. *@
+    <ProductDataSheets ProductId="Id" Model="_form" OnModelChanged="() => { }" />
 
     <section class="danger-zone">
         @if (!_confirmDelete)

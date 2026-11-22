@@ -1,0 +1,22 @@
+@*
+    Drop-down of data sheet languages (Swedish first). Use with @bind-Value="…".
+*@
+
+<select value="@Value" @onchange="OnChangeAsync" aria-label="Language">
+    @foreach (var (languageCode, languageName) in Languages.All)
+    {
+        <option value="@languageCode">@languageName</option>
+    }
+</select>
+
+@code {
+    /// <summary>The selected two-letter language code.</summary>
+    [Parameter]
+    public string Value { get; set; } = "sv";
+
+    /// <summary>Raised when the user picks another language (needed for @bind-Value).</summary>
+    [Parameter]
+    public EventCallback<string> ValueChanged { get; set; }
+
+    private Task OnChangeAsync(ChangeEventArgs e) => ValueChanged.InvokeAsync(e.Value?.ToString() ?? "sv");
+}

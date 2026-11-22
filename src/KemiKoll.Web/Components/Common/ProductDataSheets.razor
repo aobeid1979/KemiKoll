@@ -1,0 +1,334 @@
+@using System.Globalization
+@using KemiKoll.Application.Documents
+@using KemiKoll.Application.SafetyDataSheets
+@inject ManageDataSheets ManageDataSheetsUseCase
+@inject AddSafetyDataSheet AddSafetyDataSheetUseCase
+@inject ReadSafetyDataSheet ReadSafetyDataSheetUseCase
+
+@*
+    The safety data sheets of one product, on the edit page:
+    - list (newest first; the newest decides the product's status, older ones are history),
+    - correct the revision date or language of one,
+    - remove one added by mistake (with confirmation),
+    - add a newer version from the supplier as a new data sheet.
+    Every action is saved immediately, separately from the product form above.
+*@
+
+<section class="data-sheets">
+    <h2>Safety data sheets</h2>
+
+    @if (_sheets.Count == 0)
+    {
+        <p class="empty">No data sheet yet. Add one below.</p>
+    }
+    else
+    {
+        <table>
+            <thead>
+                <tr>
+                    <th>Revision date</th>
+                    <th>Language</th>
+                    <th>File</th>
+                    <th>Version</th>
+                    <th><span class="visually-hidden">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var sheet in _sheets)
+                {
+                    @if (_correctingId == sheet.Id)
+                    {
+                        <tr class="editing">
+                            <td><input type="date" @bind="_correctDate" aria-label="Revision date" /></td>
+                            <td><LanguageSelect @bind-Value="_correctLanguage" /></td>
+                            <td>@sheet.FileName</td>
+                            <td>@VersionLabel(sheet)</td>
+                            <td class="actions">
+                                <button type="button" class="primary small" @onclick="SaveCorrectionAsync" disabled="@_isBusy">Save</button>
+                                <button type="button" class="link" @onclick="CancelAll">Cancel</button>
+                            </td>
+                        </tr>
+                    }
+                    else if (_removingId == sheet.Id)
+                    {
+                        <tr class="confirm-row">
+                            <td colspan="5">
+                                Remove the data sheet <strong>@sheet.FileName</strong> (rev. @Format(sheet.RevisionDate))?
+                                <button type="button" class="danger small" @onclick="() => RemoveAsync(sheet.Id)" disabled="@_isBusy">Yes, remove</button>
+                                <button type="button" class="link" @onclick="CancelAll">No, keep it</button>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        <tr>
+                            <td>@Format(sheet.RevisionDate)</td>
+                            <td>@Languages.Name(sheet.LanguageCode)</td>
+                            <td>@sheet.FileName</td>
+                            <td>@VersionLabel(sheet)</td>
+                            <td class="actions">
+                                <button type="button" class="link" @onclick="() => StartCorrecting(sheet)" disabled="@_isBusy">Correct</button>
+                                <button type="button" class="link" @onclick="() => StartRemoving(sheet.Id)" disabled="@_isBusy">Remove</button>
+                            </td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    }
+
+    @if (_errors.Count > 0)
+    {
+        <ul class="errors" role="alert">
+            @foreach (var error in _errors)
+            {
+                <li>@error</li>
+            }
+        </ul>
+    }
+
+    <div class="new-version">
+        <h3>Add a new version</h3>
+        <p class="hint">Upload a newer PDF from the supplier. The older versions are kept as history.</p>
+        <InputFile accept=".pdf,application/pdf" OnChange="ReadNewVersionAsync" disabled="@_isBusy" />
+
+        @if (_readError is not null)
+        {
+            <p class="error" role="alert">@_readError</p>
+        }
+
+        @if (_newFileName is not null)
+        {
+            <div class="new-version-fields">
+                <p><strong>@_newFileName</strong></p>
+                @if (_newWarnings.Count > 0)
+                {
+                    <ul class="warnings">
+                        @foreach (var warning in _newWarnings)
+                        {
+                            <li>@warning</li>
+                        }
+                    </ul>
+                }
+                <label>Revision date <input type="date" @bind="_newDate" /></label>
+                <label>Language <LanguageSelect @bind-Value="_newLanguage" /></label>
+
+                @if (_newHazardCodes is { } newCodes && !SameCodes(newCodes, Model.HazardCodeList()))
+                {
+                    <div class="changed-hazards" role="status">
+                        This data sheet lists other H-codes: <strong>@(newCodes.Count == 0 ? "none" : string.Join(", ", newCodes))</strong>.
+                        <button type="button" class="link" @onclick="UseNewHazards">Use these H-codes and pictograms in the form above</button>
+                        (then save the product).
+                    </div>
+                }
+
+                <div class="buttons">
+                    <button type="button" class="primary small" @onclick="AddNewVersionAsync" disabled="@_isBusy">Add data sheet</button>
+                    <button type="button" class="link" @onclick="ClearNewVersion">Cancel</button>
+                </div>
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    // The same limit as the PDF reader; the browser stops sending larger files early.
+    private const long MaxUploadBytes = 20 * 1024 * 1024;
+
+    /// <summary>The product whose data sheets are shown.</summary>
+    [Parameter, EditorRequired]
+    public Guid ProductId { get; set; }
+
+    /// <summary>The product form above; filled in when the user takes over the H-codes of a new version.</summary>
+    [Parameter, EditorRequired]
+    public ProductFormModel Model { get; set; } = default!;
+
+    /// <summary>Raised after <see cref="Model"/> was changed here, so the page shows the new values.</summary>
+    [Parameter]
+    public EventCallback OnModelChanged { get; set; }
+
+    private IReadOnlyList<DataSheetDetails> _sheets = [];
+    private IReadOnlyList<string> _errors = [];
+    private bool _isBusy;
+
+    // Correcting one data sheet.
+    private Guid? _correctingId;
+    private DateOnly? _correctDate;
+    private string _correctLanguage = "sv";
+
+    // Confirming the removal of one data sheet.
+    private Guid? _removingId;
+
+    // A new version being added.
+    private string? _readError;
+    private string? _newFileName;
+    private DateOnly? _newDate;
+    private string _newLanguage = "sv";
+    private IReadOnlyList<string> _newWarnings = [];
+    private IReadOnlyList<string>? _newHazardCodes;
+    private IReadOnlyList<string> _newPictogramCodes = [];
+
+    protected override async Task OnInitializedAsync() => await ReloadAsync();
+
+    private async Task ReloadAsync() => _sheets = await ManageDataSheetsUseCase.ListAsync(ProductId);
+
+    private void StartCorrecting(DataSheetDetails sheet)
+    {
+        CancelAll();
+        _correctingId = sheet.Id;
+        _correctDate = sheet.RevisionDate;
+        _correctLanguage = sheet.LanguageCode;
+    }
+
+    private void StartRemoving(Guid sheetId)
+    {
+        CancelAll();
+        _removingId = sheetId;
+    }
+
+    private void CancelAll()
+    {
+        _correctingId = null;
+        _removingId = null;
+        _errors = [];
+    }
+
+    private async Task SaveCorrectionAsync()
+    {
+        if (_correctingId is not { } sheetId)
+        {
+            return;
+        }
+
+        if (_correctDate is not { } revisionDate)
+        {
+            _errors = ["Enter the revision date."];
+            return;
+        }
+
+        await RunAsync(async () =>
+        {
+            var result = await ManageDataSheetsUseCase.CorrectAsync(new CorrectDataSheetCommand(sheetId, revisionDate, _correctLanguage));
+            _errors = result.Errors;
+            if (result.Succeeded)
+            {
+                _correctingId = null;
+            }
+        });
+    }
+
+    private async Task RemoveAsync(Guid sheetId)
+    {
+        await RunAsync(async () =>
+        {
+            await ManageDataSheetsUseCase.RemoveAsync(sheetId);
+            _removingId = null;
+        });
+    }
+
+    private async Task ReadNewVersionAsync(InputFileChangeEventArgs e)
+    {
+        ClearNewVersion();
+        await RunAsync(async () =>
+        {
+            ReadSafetyDataSheetResult result;
+            try
+            {
+                await using var stream = e.File.OpenReadStream(MaxUploadBytes);
+                result = await ReadSafetyDataSheetUseCase.ExecuteAsync(stream);
+            }
+            catch (IOException)
+            {
+                // Thrown by OpenReadStream when the file is larger than MaxUploadBytes.
+                _readError = "The file is larger than 20 MB.";
+                return;
+            }
+
+            if (result.Extraction is not { } extraction)
+            {
+                _readError = result.Error;
+                return;
+            }
+
+            _newFileName = e.File.Name;
+            _newDate = extraction.RevisionDate;
+            _newLanguage = extraction.LanguageCode ?? "sv";
+            _newWarnings = extraction.Warnings;
+            _newHazardCodes = extraction.HazardCodes;
+            _newPictogramCodes = extraction.PictogramCodes;
+        });
+    }
+
+    private async Task AddNewVersionAsync()
+    {
+        if (_newFileName is not { } fileName)
+        {
+            return;
+        }
+
+        if (_newDate is not { } revisionDate)
+        {
+            _errors = ["Enter the revision date of the new data sheet."];
+            return;
+        }
+
+        await RunAsync(async () =>
+        {
+            var result = await AddSafetyDataSheetUseCase.ExecuteAsync(
+                new AddSafetyDataSheetCommand(ProductId, revisionDate, _newLanguage, fileName));
+            _errors = result.Errors;
+            if (result.Succeeded)
+            {
+                ClearNewVersion();
+            }
+        });
+    }
+
+    // Copies the H-codes and pictograms of the new version into the product form (not saved yet).
+    private async Task UseNewHazards()
+    {
+        if (_newHazardCodes is null)
+        {
+            return;
+        }
+
+        Model.HazardCodes = string.Join(", ", _newHazardCodes);
+        Model.SetPictograms(_newPictogramCodes);
+        await OnModelChanged.InvokeAsync();
+    }
+
+    private void ClearNewVersion()
+    {
+        _readError = null;
+        _newFileName = null;
+        _newDate = null;
+        _newLanguage = "sv";
+        _newWarnings = [];
+        _newHazardCodes = null;
+        _newPictogramCodes = [];
+        _errors = [];
+    }
+
+    // Runs one action at a time and reloads the list afterwards.
+    private async Task RunAsync(Func<Task> action)
+    {
+        _isBusy = true;
+        try
+        {
+            await action();
+            await ReloadAsync();
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private static bool SameCodes(IReadOnlyList<string> left, IReadOnlyList<string> right) =>
+        left.Order(StringComparer.Ordinal).SequenceEqual(right.Order(StringComparer.Ordinal), StringComparer.Ordinal);
+
+    private static string VersionLabel(DataSheetDetails sheet) => sheet.IsLatest ? "Latest" : "Older";
+
+    // ISO format (2025-03-10), the same as on Swedish safety data sheets.
+    private static string Format(DateOnly date) => date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+}
