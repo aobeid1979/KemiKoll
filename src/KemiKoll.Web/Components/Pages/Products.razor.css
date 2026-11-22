@@ -118,3 +118,11 @@
     color: #8a5a00;
     font-weight: 600;
 }
+
+/* Shown when the pictograms do not match the hazard statements (CLP). */
+.pictogram-check {
+    display: block;
+    margin-top: 0.2rem;
+    color: #8a5a00;
+    font-weight: 600;
+}

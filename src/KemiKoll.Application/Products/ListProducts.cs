@@ -37,6 +37,8 @@ public enum DataSheetStatus
 /// <param name="IsHazardous">Whether the product has any hazard statement or pictogram.</param>
 /// <param name="DataSheetStatus">The state of the product's safety data sheet.</param>
 /// <param name="DataSheetRevisionDate">Revision date of the latest data sheet, or <see langword="null"/> if there is none.</param>
+/// <param name="MissingPictogramCodes">Pictograms the hazard statements require but the product does not have (CLP).</param>
+/// <param name="UnexpectedPictogramCodes">Pictograms the product has but none of its hazard statements require.</param>
 public sealed record ProductSummary(
     Guid Id,
     string Name,
@@ -45,7 +47,9 @@ public sealed record ProductSummary(
     IReadOnlyList<string> PictogramCodes,
     bool IsHazardous,
     DataSheetStatus DataSheetStatus,
-    DateOnly? DataSheetRevisionDate);
+    DateOnly? DataSheetRevisionDate,
+    IReadOnlyList<string> MissingPictogramCodes,
+    IReadOnlyList<string> UnexpectedPictogramCodes);
 
 /// <summary>
 /// Use case: list all chemical products in the inventory, with the state of their data sheets.
@@ -82,6 +86,7 @@ public sealed class ListProducts(
             .Select(product =>
             {
                 var latestSheet = latestRevisionByProduct.GetValueOrDefault(product.Id);
+                var pictogramRequirement = PictogramRules.For(product.HazardStatements);
                 return new ProductSummary(
                     product.Id,
                     product.Name,
@@ -90,7 +95,9 @@ public sealed class ListProducts(
                     product.Pictograms.Select(pictogram => pictogram.ToCode()).ToList(),
                     product.IsHazardous,
                     GetStatus(product.IsHazardous, latestSheet, today, policy),
-                    latestSheet?.RevisionDate);
+                    latestSheet?.RevisionDate,
+                    pictogramRequirement.MissingFrom(product.Pictograms).Select(p => p.ToCode()).ToList(),
+                    pictogramRequirement.UnexpectedIn(product.Pictograms).Select(p => p.ToCode()).ToList());
             })
             .ToList();
     }

@@ -53,6 +53,18 @@ public static partial class SafetyDataSheetTextParser
             warnings.Add("No H-codes were found in section 2. Some data sheets, for example from outside the EU, write only the hazard text. If the product is classified as hazardous, enter the codes by hand.");
         }
 
+        // Many data sheets show the pictograms only as images, which text rules cannot read.
+        // Then the pictograms are derived from the H-codes with the CLP rules, as a suggestion.
+        var pictogramCodes = FindPictogramCodes(section2);
+        if (pictogramCodes.Count == 0 && hazardCodes.Count > 0)
+        {
+            pictogramCodes = SuggestPictograms(hazardCodes);
+            if (pictogramCodes.Count > 0)
+            {
+                warnings.Add("The pictograms were not written as text in the data sheet, so they were chosen from the H-codes. Compare them with the symbols in section 2.");
+            }
+        }
+
         var revisionDate = FindRevisionDate(text);
         if (revisionDate is null)
         {
@@ -65,7 +77,7 @@ public static partial class SafetyDataSheetTextParser
             RevisionDate: revisionDate,
             LanguageCode: DetectLanguage(text),
             HazardCodes: hazardCodes,
-            PictogramCodes: FindPictogramCodes(section2),
+            PictogramCodes: pictogramCodes,
             Warnings: warnings);
     }
 
@@ -143,6 +155,9 @@ public static partial class SafetyDataSheetTextParser
         // Official order, the same as in the form.
         return Enum.GetValues<Pictogram>().Where(found.Contains).Select(p => p.ToCode()).ToList();
     }
+
+    private static List<string> SuggestPictograms(IEnumerable<string> hazardCodes) =>
+        PictogramRules.For(hazardCodes.Select(HazardStatement.Parse)).Required.Select(p => p.ToCode()).ToList();
 
     private static DateOnly? FindRevisionDate(string text) =>
         FindDateAfterLabel(text, RevisionDateLabels()) ?? FindDateAfterLabel(text, IssueDateLabels());

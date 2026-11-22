@@ -358,4 +358,31 @@ public class SafetyDataSheetTextParserTests
 
         Assert.Equal(expected, result.ProductName);
     }
+
+    [Fact]
+    public void Parse_PictogramsOnlyAsImages_AreSuggestedFromHazardCodes()
+    {
+        // Like the real Bensin data sheet: "Faropiktogram :" followed by images only.
+        const string sheet = """
+            AVSNITT 1: Namnet
+            AVSNITT 2: Farliga egenskaper
+            Flam. Liq. 2, H225  Skin Irrit. 2, H315  STOT SE 3, H336  Asp. Tox. 1, H304  Aquatic Chronic 2, H411
+            Faropiktogram :
+            AVSNITT 3: Sammansättning
+            """;
+
+        var result = SafetyDataSheetTextParser.Parse(sheet);
+
+        string[] expected = ["GHS02", "GHS07", "GHS08", "GHS09"];
+        Assert.Equal(expected, result.PictogramCodes);
+        Assert.Contains(result.Warnings, w => w.Contains("chosen from the H-codes", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Parse_PictogramsWrittenAsText_AreNotReplacedBySuggestion()
+    {
+        var result = SafetyDataSheetTextParser.Parse(SwedishSheet);
+
+        Assert.DoesNotContain(result.Warnings, w => w.Contains("chosen from the H-codes", StringComparison.Ordinal));
+    }
 }
