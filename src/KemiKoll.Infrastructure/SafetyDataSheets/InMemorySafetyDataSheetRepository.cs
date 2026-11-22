@@ -47,4 +47,28 @@ public sealed class InMemorySafetyDataSheetRepository : ISafetyDataSheetReposito
 
         return Task.CompletedTask;
     }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<SafetyDataSheet>> ListForProductAsync(Guid productId, CancellationToken cancellationToken = default)
+    {
+        IReadOnlyList<SafetyDataSheet> sheets = [.. _sheets.Values.Where(sheet => sheet.ProductId == productId)];
+        return Task.FromResult(sheets);
+    }
+
+    /// <inheritdoc />
+    public Task<SafetyDataSheet?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
+        Task.FromResult(_sheets.GetValueOrDefault(id));
+
+    /// <inheritdoc />
+    public Task<bool> UpdateAsync(SafetyDataSheet sheet, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(sheet);
+
+        // Only replace a data sheet that still exists; a removed one is not brought back.
+        return Task.FromResult(_sheets.TryGetValue(sheet.Id, out var current) && _sheets.TryUpdate(sheet.Id, sheet, current));
+    }
+
+    /// <inheritdoc />
+    public Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default) =>
+        Task.FromResult(_sheets.TryRemove(id, out _));
 }

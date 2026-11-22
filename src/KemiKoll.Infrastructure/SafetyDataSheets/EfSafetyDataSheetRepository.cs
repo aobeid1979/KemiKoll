@@ -41,4 +41,55 @@ public sealed class EfSafetyDataSheetRepository(IDbContextFactory<KemiKollDbCont
             .ExecuteDeleteAsync(cancellationToken)
             .ConfigureAwait(false);
     }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<SafetyDataSheet>> ListForProductAsync(Guid productId, CancellationToken cancellationToken = default)
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+
+        // Uses the index on product_id.
+        return await context.SafetyDataSheets.AsNoTracking()
+            .Where(sheet => sheet.ProductId == productId)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<SafetyDataSheet?> GetAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        return await context.SafetyDataSheets.AsNoTracking()
+            .SingleOrDefaultAsync(sheet => sheet.Id == id, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> UpdateAsync(SafetyDataSheet sheet, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(sheet);
+
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        context.SafetyDataSheets.Update(sheet);
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            return true;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // No row was updated: the data sheet was removed in the meantime.
+            return false;
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        var deleted = await context.SafetyDataSheets
+            .Where(sheet => sheet.Id == id)
+            .ExecuteDeleteAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return deleted > 0;
+    }
 }
