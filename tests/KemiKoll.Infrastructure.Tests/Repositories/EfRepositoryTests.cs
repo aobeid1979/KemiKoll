@@ -160,4 +160,35 @@ public sealed class EfRepositoryTests(PostgreSqlFixture database) : IAsyncLifeti
         Assert.Equal(other.Id, Assert.Single(await _sheets.ListAsync()).ProductId);
         Assert.False(await _products.DeleteAsync(product.Id));
     }
+
+    [Fact]
+    public async Task DataSheets_ListForProduct_CorrectAndDeleteOne()
+    {
+        var product = ChemicalProduct.Create("Ethanol", "Reagent Chemical Services");
+        var other = ChemicalProduct.Create("Acetone", "Exempel Kemi AB");
+        await _products.AddAsync(product);
+        await _products.AddAsync(other);
+        var old = SafetyDataSheet.Create(product.Id, new DateOnly(2019, 1, 1), "sv", "old.pdf");
+        var latest = SafetyDataSheet.Create(product.Id, new DateOnly(2025, 8, 7), "sv", "new.pdf");
+        await _sheets.AddAsync(old);
+        await _sheets.AddAsync(latest);
+        await _sheets.AddAsync(SafetyDataSheet.Create(other.Id, new DateOnly(2025, 3, 10), "sv", "other.pdf"));
+
+        // Only this product's data sheets.
+        Assert.Equal(2, (await _sheets.ListForProductAsync(product.Id)).Count);
+
+        // Correct one, the way the app does: load, change, save.
+        var loaded = (await _sheets.GetAsync(latest.Id))!;
+        loaded.Correct(new DateOnly(2025, 8, 8), "en");
+        Assert.True(await _sheets.UpdateAsync(loaded));
+        var reloaded = (await _sheets.GetAsync(latest.Id))!;
+        Assert.Equal(new DateOnly(2025, 8, 8), reloaded.RevisionDate);
+        Assert.Equal("en", reloaded.LanguageCode);
+
+        // Remove one; the other version stays.
+        Assert.True(await _sheets.DeleteAsync(old.Id));
+        Assert.Equal(latest.Id, Assert.Single(await _sheets.ListForProductAsync(product.Id)).Id);
+        Assert.False(await _sheets.DeleteAsync(old.Id));
+        Assert.Null(await _sheets.GetAsync(old.Id));
+    }
 }
