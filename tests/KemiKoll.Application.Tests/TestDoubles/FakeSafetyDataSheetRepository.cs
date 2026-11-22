@@ -16,4 +16,10 @@ internal sealed class FakeSafetyDataSheetRepository : ISafetyDataSheetRepository
 
     public Task<IReadOnlyList<SafetyDataSheet>> ListAsync(CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<SafetyDataSheet>>(Sheets);
+
+    public Task DeleteForProductAsync(Guid productId, CancellationToken cancellationToken = default)
+    {
+        Sheets.RemoveAll(sheet => sheet.ProductId == productId);
+        return Task.CompletedTask;
+    }
 }

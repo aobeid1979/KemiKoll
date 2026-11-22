@@ -216,4 +216,57 @@ public class ChemicalProductTests
 
         Assert.False(product.RemovePictogram(Pictogram.ExplodingBomb));
     }
+
+    [Fact]
+    public void Update_ValidValues_ReplacesAllDetailsAndKeepsId()
+    {
+        var product = ChemicalProduct.Create("Ethanol", "Old AB", [H315]);
+        product.AddPictogram(Pictogram.FlameOverCircle);
+        var id = product.Id;
+
+        product.Update(" Ethanol absolute ", " New AB ", [H225, H225], [Pictogram.Flame, Pictogram.Flame]);
+
+        Assert.Equal(id, product.Id);
+        Assert.Equal("Ethanol absolute", product.Name);
+        Assert.Equal("New AB", product.Supplier);
+        Assert.Equal(H225, Assert.Single(product.HazardStatements));
+        Assert.Equal(Pictogram.Flame, Assert.Single(product.Pictograms));
+    }
+
+    [Fact]
+    public void Update_EmptyLists_RemovesAllHazards()
+    {
+        var product = ChemicalProduct.Create("Solvent", "Supplier", [H225]);
+        product.AddPictogram(Pictogram.Flame);
+
+        product.Update("Solvent", "Supplier", [], []);
+
+        Assert.Empty(product.HazardStatements);
+        Assert.Empty(product.Pictograms);
+        Assert.False(product.IsHazardous);
+    }
+
+    [Fact]
+    public void Update_InvalidSupplier_ChangesNothing()
+    {
+        var product = ChemicalProduct.Create("Ethanol", "Old AB", [H315]);
+
+        Assert.Throws<ArgumentException>(() => product.Update("New name", " ", [H225], [Pictogram.Flame]));
+
+        // Validation happens before any change, so the name was not changed either.
+        Assert.Equal("Ethanol", product.Name);
+        Assert.Equal("Old AB", product.Supplier);
+        Assert.Equal(H315, Assert.Single(product.HazardStatements));
+        Assert.Empty(product.Pictograms);
+    }
+
+    [Fact]
+    public void Update_UndefinedPictogram_ChangesNothing()
+    {
+        var product = ChemicalProduct.Create("Ethanol", "Old AB");
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => product.Update("New name", "New AB", [], [(Pictogram)42]));
+
+        Assert.Equal("Ethanol", product.Name);
+    }
 }

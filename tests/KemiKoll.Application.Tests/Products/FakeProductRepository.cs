@@ -19,4 +19,18 @@ internal sealed class FakeProductRepository : IProductRepository
 
     public Task<IReadOnlyList<ChemicalProduct>> ListAsync(CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<ChemicalProduct>>(Products);
+
+    public Task<ChemicalProduct?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Products.SingleOrDefault(product => product.Id == id));
+
+    public int UpdateCount { get; private set; }
+
+    public Task<bool> UpdateAsync(ChemicalProduct product, CancellationToken cancellationToken = default)
+    {
+        UpdateCount++;
+        return Task.FromResult(Products.Any(p => p.Id == product.Id));
+    }
+
+    public Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Products.RemoveAll(product => product.Id == id) > 0);
 }
