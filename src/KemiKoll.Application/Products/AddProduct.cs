@@ -79,8 +79,8 @@ public sealed class AddProduct(IProductRepository repository, ISafetyDataSheetRe
         ArgumentNullException.ThrowIfNull(command);
 
         var errors = new List<string>();
-        var hazardStatements = ParseHazardStatements(command.HazardCodes, errors);
-        var pictograms = ParsePictograms(command.PictogramCodes, errors);
+        var hazardStatements = ProductInput.ParseHazardStatements(command.HazardCodes, errors);
+        var pictograms = ProductInput.ParsePictograms(command.PictogramCodes, errors);
 
         ChemicalProduct? product = null;
         try
@@ -133,41 +133,5 @@ public sealed class AddProduct(IProductRepository repository, ISafetyDataSheetRe
             errors.Add("Data sheet – " + UserMessages.From(exception));
             return null;
         }
-    }
-
-    private static List<HazardStatement> ParseHazardStatements(IReadOnlyList<string>? codes, List<string> errors)
-    {
-        var statements = new List<HazardStatement>();
-        foreach (var code in codes ?? [])
-        {
-            if (HazardStatement.TryParse(code, out var statement))
-            {
-                statements.Add(statement);
-            }
-            else
-            {
-                errors.Add($"'{code}' is not a valid hazard statement code (for example H225 or EUH066).");
-            }
-        }
-
-        return statements;
-    }
-
-    private static List<Pictogram> ParsePictograms(IReadOnlyList<string>? codes, List<string> errors)
-    {
-        var pictograms = new List<Pictogram>();
-        foreach (var code in codes ?? [])
-        {
-            if (Domain.Hazards.PictogramCodes.TryParse(code, out var pictogram))
-            {
-                pictograms.Add(pictogram);
-            }
-            else
-            {
-                errors.Add($"'{code}' is not a valid pictogram code (GHS01 to GHS09).");
-            }
-        }
-
-        return pictograms;
     }
 }
