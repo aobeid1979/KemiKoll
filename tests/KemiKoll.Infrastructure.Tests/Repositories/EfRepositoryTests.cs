@@ -94,4 +94,70 @@ public sealed class EfRepositoryTests(PostgreSqlFixture database) : IAsyncLifeti
 
         Assert.Empty(await _sheets.ListAsync());
     }
+
+    [Fact]
+    public async Task GetAsync_ReturnsProductOrNull()
+    {
+        var product = ChemicalProduct.Create("Acetone", "Exempel Kemi AB", [HazardStatement.Parse("H225")]);
+        await _products.AddAsync(product);
+
+        var loaded = await _products.GetAsync(product.Id);
+
+        Assert.NotNull(loaded);
+        Assert.Equal("Acetone", loaded.Name);
+        Assert.Null(await _products.GetAsync(Guid.NewGuid()));
+    }
+
+    [Fact]
+    public async Task UpdateAsync_SavesAllChangedValuesIncludingLists()
+    {
+        var product = ChemicalProduct.Create("Ethanol", "Amfo Company", [HazardStatement.Parse("H225")]);
+        product.AddPictogram(Pictogram.FlameOverCircle);
+        await _products.AddAsync(product);
+
+        // Edit the way the app does: load, change, save.
+        var loaded = (await _products.GetAsync(product.Id))!;
+        loaded.Update("Ethanol absolute", "Reagent Chemical Services", [HazardStatement.Parse("H225"), HazardStatement.Parse("H319")], [Pictogram.Flame, Pictogram.ExclamationMark]);
+        var saved = await _products.UpdateAsync(loaded);
+
+        var reloaded = (await _products.GetAsync(product.Id))!;
+        Assert.True(saved);
+        Assert.Equal("Ethanol absolute", reloaded.Name);
+        Assert.Equal("Reagent Chemical Services", reloaded.Supplier);
+        Assert.Equal(loaded.HazardStatements, reloaded.HazardStatements);
+        Assert.Equal(loaded.Pictograms, reloaded.Pictograms);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_DeletedProduct_ReturnsFalseAndDoesNotRecreateIt()
+    {
+        var product = ChemicalProduct.Create("Acetone", "Exempel Kemi AB");
+        await _products.AddAsync(product);
+        await _products.DeleteAsync(product.Id);
+
+        product.Update("Acetone 2", "Exempel Kemi AB", [], []);
+        var saved = await _products.UpdateAsync(product);
+
+        Assert.False(saved);
+        Assert.Empty(await _products.ListAsync());
+    }
+
+    [Fact]
+    public async Task DeleteAsync_RemovesProductAndItsDataSheets()
+    {
+        var product = ChemicalProduct.Create("Acetone", "Exempel Kemi AB");
+        var other = ChemicalProduct.Create("Ethanol", "Exempel Kemi AB");
+        await _products.AddAsync(product);
+        await _products.AddAsync(other);
+        await _sheets.AddAsync(SafetyDataSheet.Create(product.Id, new DateOnly(2025, 3, 10), "sv", "a.pdf"));
+        await _sheets.AddAsync(SafetyDataSheet.Create(other.Id, new DateOnly(2025, 3, 10), "sv", "b.pdf"));
+
+        await _sheets.DeleteForProductAsync(product.Id);
+        var deleted = await _products.DeleteAsync(product.Id);
+
+        Assert.True(deleted);
+        Assert.Equal(other.Id, Assert.Single(await _products.ListAsync()).Id);
+        Assert.Equal(other.Id, Assert.Single(await _sheets.ListAsync()).ProductId);
+        Assert.False(await _products.DeleteAsync(product.Id));
+    }
 }

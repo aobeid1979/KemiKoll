@@ -36,4 +36,15 @@ public sealed class InMemorySafetyDataSheetRepository : ISafetyDataSheetReposito
         IReadOnlyList<SafetyDataSheet> sheets = [.. _sheets.Values];
         return Task.FromResult(sheets);
     }
+
+    /// <inheritdoc />
+    public Task DeleteForProductAsync(Guid productId, CancellationToken cancellationToken = default)
+    {
+        foreach (var sheet in _sheets.Values.Where(sheet => sheet.ProductId == productId))
+        {
+            _sheets.TryRemove(sheet.Id, out _);
+        }
+
+        return Task.CompletedTask;
+    }
 }

@@ -96,6 +96,59 @@ public sealed class ChemicalProduct
     /// <exception cref="ArgumentException"><paramref name="supplier"/> is empty or too long.</exception>
     public void ChangeSupplier(string supplier) => Supplier = ValidateText(supplier, nameof(supplier));
 
+    /// <summary>
+    /// Replaces all details of the product at once, for example after editing it in a form.
+    /// </summary>
+    /// <remarks>
+    /// Every value is validated <b>before</b> anything changes, so a failed update leaves the
+    /// product exactly as it was. Duplicates are ignored and the order of the lists is kept.
+    /// </remarks>
+    /// <param name="name">The new trade name. Surrounding spaces are removed.</param>
+    /// <param name="supplier">The new supplier. Surrounding spaces are removed.</param>
+    /// <param name="hazardStatements">The complete new list of hazard statements.</param>
+    /// <param name="pictograms">The complete new list of pictograms.</param>
+    /// <exception cref="ArgumentException"><paramref name="name"/> or <paramref name="supplier"/> is empty or too long.</exception>
+    /// <exception cref="ArgumentNullException">A list is <see langword="null"/> or contains <see langword="null"/>.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">A pictogram is not a defined GHS pictogram.</exception>
+    public void Update(
+        string name,
+        string supplier,
+        IEnumerable<HazardStatement> hazardStatements,
+        IEnumerable<Pictogram> pictograms)
+    {
+        ArgumentNullException.ThrowIfNull(hazardStatements);
+        ArgumentNullException.ThrowIfNull(pictograms);
+
+        var validName = ValidateText(name, nameof(name));
+        var validSupplier = ValidateText(supplier, nameof(supplier));
+
+        var newStatements = new List<HazardStatement>();
+        foreach (var statement in hazardStatements)
+        {
+            ArgumentNullException.ThrowIfNull(statement, nameof(hazardStatements));
+            if (!newStatements.Contains(statement))
+            {
+                newStatements.Add(statement);
+            }
+        }
+
+        var newPictograms = new List<Pictogram>();
+        foreach (var pictogram in pictograms)
+        {
+            PictogramCodes.EnsureDefined(pictogram);
+            if (!newPictograms.Contains(pictogram))
+            {
+                newPictograms.Add(pictogram);
+            }
+        }
+
+        // Everything is valid: now change the product.
+        Name = validName;
+        Supplier = validSupplier;
+        _hazardStatements = newStatements;
+        _pictograms = newPictograms;
+    }
+
     /// <summary>Adds a hazard statement unless the product already has it.</summary>
     /// <param name="statement">The hazard statement to add.</param>
     /// <returns><see langword="true"/> if it was added; <see langword="false"/> if it was already there.</returns>

@@ -1,0 +1,148 @@
+@page "/products/{Id:guid}/edit"
+@rendermode InteractiveServer
+@using KemiKoll.Application.Products
+@* Full name: inside this page "EditProduct" would mean the page itself, not the use case. *@
+@inject KemiKoll.Application.Products.EditProduct EditProductUseCase
+@inject NavigationManager Navigation
+
+@*
+    Edit or delete an existing product.
+    Uses the same ProductFormFields as "Add product", so the fields and the CLP pictogram check
+    behave the same. Deleting asks for confirmation on the page first.
+*@
+
+<PageTitle>Edit product – KemiKoll</PageTitle>
+
+@if (_notFound)
+{
+    <h1>Product not found</h1>
+    <p>The product may have been deleted. <a href="products">Back to the product list</a></p>
+}
+else if (_form is null)
+{
+    <p>Loading…</p>
+}
+else
+{
+    <h1>Edit product</h1>
+
+    <form class="product-form" @onsubmit="SaveAsync">
+        <ProductFormFields Model="_form" />
+
+        @if (_errors.Count > 0)
+        {
+            <div class="errors" role="alert">
+                <strong>The changes could not be saved:</strong>
+                <ul>
+                    @foreach (var error in _errors)
+                    {
+                        <li>@error</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        <div class="actions">
+            <button type="submit" class="primary" disabled="@_isBusy">
+                @(_isBusy ? "Saving…" : "Save changes")
+            </button>
+            <a href="products">Cancel</a>
+        </div>
+    </form>
+
+    <section class="danger-zone">
+        @if (!_confirmDelete)
+        {
+            <button type="button" class="danger" @onclick="() => _confirmDelete = true" disabled="@_isBusy">Delete product</button>
+        }
+        else
+        {
+            <div class="confirm" role="alertdialog" aria-labelledby="confirm-text">
+                <p id="confirm-text">
+                    Delete <strong>@_originalName</strong>? Its safety data sheets are deleted too. This cannot be undone.
+                </p>
+                <button type="button" class="danger" @onclick="DeleteAsync" disabled="@_isBusy">Yes, delete</button>
+                <button type="button" class="link" @onclick="() => _confirmDelete = false" disabled="@_isBusy">No, keep it</button>
+            </div>
+        }
+    </section>
+}
+
+@code {
+    /// <summary>The product id from the address, for example /products/{id}/edit.</summary>
+    [Parameter]
+    public Guid Id { get; set; }
+
+    private ProductFormModel? _form;
+    private string _originalName = string.Empty;
+    private IReadOnlyList<string> _errors = [];
+    private bool _notFound;
+    private bool _isBusy;
+    private bool _confirmDelete;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var product = await EditProductUseCase.GetAsync(Id);
+        if (product is null)
+        {
+            _notFound = true;
+            return;
+        }
+
+        _originalName = product.Name;
+        _form = new ProductFormModel
+        {
+            Name = product.Name,
+            Supplier = product.Supplier,
+            HazardCodes = string.Join(", ", product.HazardCodes),
+        };
+        _form.SetPictograms(product.PictogramCodes);
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_form is null)
+        {
+            return;
+        }
+
+        _isBusy = true;
+        try
+        {
+            var result = await EditProductUseCase.UpdateAsync(new UpdateProductCommand(
+                Id,
+                _form.Name,
+                _form.Supplier,
+                _form.HazardCodeList(),
+                _form.PictogramCodeList()));
+
+            if (result.Succeeded)
+            {
+                Navigation.NavigateTo("products");
+                return;
+            }
+
+            _notFound = result.NotFound;
+            _errors = result.Errors;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private async Task DeleteAsync()
+    {
+        _isBusy = true;
+        try
+        {
+            // Whether it was deleted now or earlier by someone else, it is gone: back to the list.
+            await EditProductUseCase.DeleteAsync(Id);
+            Navigation.NavigateTo("products");
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+}

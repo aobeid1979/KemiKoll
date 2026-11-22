@@ -126,3 +126,18 @@
     color: #8a5a00;
     font-weight: 600;
 }
+
+.edit {
+    color: #1f4e78;
+    font-weight: 600;
+}
+
+/* Column heading for screen readers only. */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}

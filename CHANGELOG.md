@@ -13,8 +13,11 @@ and the project uses [Semantic Versioning](https://semver.org/).
 
 - CLP pictogram rules (`PictogramRules`): required pictograms from the H-codes with the Article 26 precedence rules. Used to suggest pictograms when a data sheet shows them only as images, to check the form live (with "Use the pictograms that match the H-codes"), and to show "Missing / Not expected" in the product list. ([decision 0007](docs/decisions/0007-pictograms-from-hazard-statements.md))
 
+- **Edit and delete products**: "Edit" link in the product list, edit page with the same form and CLP check, delete with confirmation (data sheets are deleted too).
+
 ### Changed
 - `AddProduct` can save a data sheet together with the product; the data sheet is validated before anything is saved.
+- The product fields and the pictogram check are a shared component (`ProductFormFields`), used by the Add and Edit pages.
 - Data sheet extraction tested with real files and improved: dates with month names ("25 January 2021", "25 januari 2021"), more revision-date labels ("Effective date", "Date of latest revision", "Senast reviderad" …), "Product identifier" as fallback for the name, supplier chosen by company-name ending (AB, Ltd., GmbH …), table layouts with label and value on one line.
 - New warnings: document is not a safety data sheet (e.g. a technical data sheet); no H-codes in section 2.
 

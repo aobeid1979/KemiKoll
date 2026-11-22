@@ -35,4 +35,48 @@ public sealed class EfProductRepository(IDbContextFactory<KemiKollDbContext> con
         // Read-only: no change tracking needed.
         return await context.Products.AsNoTracking().ToListAsync(cancellationToken).ConfigureAwait(false);
     }
+
+    /// <inheritdoc />
+    public async Task<ChemicalProduct?> GetAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+        return await context.Products.AsNoTracking()
+            .SingleOrDefaultAsync(product => product.Id == id, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> UpdateAsync(ChemicalProduct product, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(product);
+
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+
+        // The product was loaded by another context, so it is attached here and all its
+        // columns are written.
+        context.Products.Update(product);
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            return true;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // No row was updated: the product was deleted in the meantime.
+            return false;
+        }
+    }
+
+    /// <inheritdoc />
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken).ConfigureAwait(false);
+
+        // One DELETE statement; the database deletes the product's data sheets too (cascade).
+        var deleted = await context.Products
+            .Where(product => product.Id == id)
+            .ExecuteDeleteAsync(cancellationToken)
+            .ConfigureAwait(false);
+        return deleted > 0;
+    }
 }

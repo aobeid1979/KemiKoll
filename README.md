@@ -28,6 +28,7 @@ uploads its data sheets as PDF files and an AI agent fills in the inventory.
 - **Add product** form that validates H-codes and pictograms and shows clear error messages.
 - **Fill in from a safety data sheet:** upload the PDF and the form is filled in — product name,
   supplier, H-phrases (section 2 only), pictogram codes, revision date and language — for you to check and save.
+- **Edit and delete** products (delete asks for confirmation and also removes the product's data sheets).
 - **CLP pictogram check:** the pictograms are compared with the H-codes (incl. the CLP precedence rules).
   Missing or unexpected pictograms are shown in the form and the list; when a data sheet shows its
   pictograms only as images, they are suggested from the H-codes.

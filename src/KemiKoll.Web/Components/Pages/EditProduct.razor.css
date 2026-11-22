@@ -1,0 +1,49 @@
+/* Styles for the "Edit product" page only (Blazor scoped CSS). Shared form styles are in wwwroot/app.css. */
+
+.danger-zone {
+    max-width: 640px;
+    margin-top: 2.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid #e3e3e3;
+}
+
+button.danger {
+    padding: 0.5rem 1rem;
+    border: 1px solid #c62828;
+    border-radius: 4px;
+    background: #fff;
+    color: #c62828;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+.confirm button.danger {
+    background: #c62828;
+    color: #fff;
+}
+
+button.danger:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+.confirm {
+    padding: 0.75rem 1rem;
+    border: 1px solid #f1b0b0;
+    border-radius: 4px;
+    background: #fde8e8;
+}
+
+.confirm p {
+    margin: 0 0 0.75rem;
+}
+
+button.link {
+    margin-left: 1rem;
+    padding: 0;
+    border: none;
+    background: none;
+    color: #1f4e78;
+    text-decoration: underline;
+    cursor: pointer;
+}

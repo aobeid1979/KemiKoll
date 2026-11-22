@@ -20,4 +20,10 @@ public interface ISafetyDataSheetRepository
     /// <param name="cancellationToken">Cancels the operation.</param>
     /// <returns>All saved data sheets, in no particular order.</returns>
     Task<IReadOnlyList<SafetyDataSheet>> ListAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Deletes all safety data sheets of a product.</summary>
+    /// <param name="productId">The product id.</param>
+    /// <param name="cancellationToken">Cancels the operation.</param>
+    /// <returns>A task that completes when the data sheets are deleted.</returns>
+    Task DeleteForProductAsync(Guid productId, CancellationToken cancellationToken = default);
 }

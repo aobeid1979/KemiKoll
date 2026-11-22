@@ -41,7 +41,7 @@ The main feature: upload a safety data sheet, and the product is filled in.
 - [ ] Tests with real, public safety data sheets
 
 ## v0.6.0 — Working with the inventory
-- [ ] Edit and delete products
+- [x] Edit and delete products
 - [ ] Search and filter the list
 - [ ] Export the chemical inventory to PDF and Excel
 - [ ] Storage location (workplace) per product

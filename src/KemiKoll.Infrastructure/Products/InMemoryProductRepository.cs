@@ -37,4 +37,26 @@ public sealed class InMemoryProductRepository : IProductRepository
         IReadOnlyList<ChemicalProduct> products = [.. _products.Values];
         return Task.FromResult(products);
     }
+
+    /// <inheritdoc />
+    public Task<ChemicalProduct?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
+        Task.FromResult(_products.GetValueOrDefault(id));
+
+    /// <inheritdoc />
+    public Task<bool> UpdateAsync(ChemicalProduct product, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(product);
+
+        // Only replace a product that still exists; a deleted product is not brought back.
+        if (!_products.TryGetValue(product.Id, out var current))
+        {
+            return Task.FromResult(false);
+        }
+
+        return Task.FromResult(_products.TryUpdate(product.Id, product, current));
+    }
+
+    /// <inheritdoc />
+    public Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default) =>
+        Task.FromResult(_products.TryRemove(id, out _));
 }
