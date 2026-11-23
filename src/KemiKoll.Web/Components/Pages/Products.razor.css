@@ -20,6 +20,23 @@
     background: #173b5c;
 }
 
+.header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+/* Less prominent than "Add product". */
+.button.secondary {
+    border: 1px solid #1f4e78;
+    background: #fff;
+    color: #1f4e78;
+}
+
+.button.secondary:hover {
+    background: #eaf1f8;
+}
+
 /* Quick filters and search box above the table. */
 .quick-filters {
     display: flex;

@@ -1,4 +1,5 @@
 using KemiKoll.Application.Documents;
+using KemiKoll.Application.Exports;
 using KemiKoll.Application.Products;
 using KemiKoll.Application.SafetyDataSheets;
 using KemiKoll.Infrastructure;
@@ -29,6 +30,7 @@ builder.Services.AddScoped<EditProduct>();
 builder.Services.AddScoped<AddSafetyDataSheet>();
 builder.Services.AddScoped<ManageDataSheets>();
 builder.Services.AddScoped<ReadSafetyDataSheet>();
+builder.Services.AddScoped<ExportInventory>();
 
 var app = builder.Build();
 
@@ -71,6 +73,14 @@ app.UseHttpsRedirection();
 app.UseAntiforgery();
 
 app.MapStaticAssets();
+
+// Download the whole inventory as an Excel file (the "Export to Excel" button on /products).
+app.MapGet("/products/export.xlsx", async (ExportInventory export, CancellationToken cancellationToken) =>
+{
+    var file = await export.ToExcelAsync(cancellationToken);
+    return Results.File(file.Content, file.ContentType, file.FileName);
+});
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

@@ -29,3 +29,9 @@ See each file page above for its licence terms.
 - **What:** library used to read the text of PDF files (NuGet package `PdfPig`).
 - **Source:** https://github.com/UglyToad/PdfPig
 - **License:** Apache License 2.0
+
+## Open XML SDK
+
+- **What:** library used to write Excel (.xlsx) files, the inventory export (NuGet package `DocumentFormat.OpenXml`).
+- **Source:** https://github.com/dotnet/Open-XML-SDK
+- **License:** MIT License, © Microsoft Corporation
