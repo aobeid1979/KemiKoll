@@ -26,9 +26,9 @@ public class OpenXmlInventorySpreadsheetWriterTests
         stream.Position = 0;
         using var document = SpreadsheetDocument.Open(stream, isEditable: false);
         var workbookPart = document.WorkbookPart!;
-        Assert.Equal("Inventory", workbookPart.Workbook.Sheets!.Elements<Sheet>().Single().Name!.Value);
+        Assert.Equal("Inventory", workbookPart.Workbook!.Sheets!.Elements<Sheet>().Single().Name!.Value);
 
-        return workbookPart.WorksheetParts.Single().Worksheet.Descendants<Cell>()
+        return workbookPart.WorksheetParts.Single().Worksheet!.Descendants<Cell>()
             .ToDictionary(cell => cell.CellReference!.Value!);
     }
 
