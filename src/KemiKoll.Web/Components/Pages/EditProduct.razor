@@ -4,6 +4,7 @@
 @* Full name: inside this page "EditProduct" would mean the page itself, not the use case. *@
 @inject KemiKoll.Application.Products.EditProduct EditProductUseCase
 @inject NavigationManager Navigation
+@inject TimeProvider Clock
 
 @*
     Edit or delete an existing product, and manage its safety data sheets.
@@ -25,6 +26,13 @@ else if (_form is null)
 else
 {
     <h1>Edit product</h1>
+    <p class="dates">
+        Added @FormatTime(_addedAt)
+        @if (_lastChangedAt != _addedAt)
+        {
+            <span> · Last edited @FormatTime(_lastChangedAt)</span>
+        }
+    </p>
 
     <form class="product-form" @onsubmit="SaveAsync">
         <ProductFormFields Model="_form" />
@@ -78,6 +86,8 @@ else
 
     private ProductFormModel? _form;
     private string _originalName = string.Empty;
+    private DateTimeOffset _addedAt;
+    private DateTimeOffset _lastChangedAt;
     private IReadOnlyList<string> _errors = [];
     private bool _notFound;
     private bool _isBusy;
@@ -93,6 +103,8 @@ else
         }
 
         _originalName = product.Name;
+        _addedAt = product.AddedAt;
+        _lastChangedAt = product.LastChangedAt;
         _form = new ProductFormModel
         {
             Name = product.Name,
@@ -148,4 +160,9 @@ else
             _isBusy = false;
         }
     }
+
+    // Stored in UTC; shown in the server's local time (Swedish time when run in Sweden), ISO style.
+    private string FormatTime(DateTimeOffset time) =>
+        TimeZoneInfo.ConvertTime(time, Clock.LocalTimeZone)
+            .ToString("yyyy-MM-dd HH:mm", System.Globalization.CultureInfo.InvariantCulture);
 }
