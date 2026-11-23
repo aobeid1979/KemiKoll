@@ -46,7 +46,8 @@ switch (database.State)
         Environment.ExitCode = 1;
         return;
     case DatabaseState.PendingMigrations:
-        StartupLog.PendingMigrations(app.Logger, string.Join(", ", database.PendingMigrations));
+        var missing = string.Join(", ", database.PendingMigrations);
+        StartupLog.PendingMigrations(app.Logger, missing);
         Environment.ExitCode = 1;
         return;
 }
