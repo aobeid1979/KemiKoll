@@ -1,8 +1,13 @@
 @page "/products"
+@rendermode InteractiveServer
 @using KemiKoll.Application.Products
 @inject ListProducts ListProducts
 
-@* The chemical inventory: one row per product. New products are added on /products/new. *@
+@*
+    The chemical inventory: one row per product. New products are added on /products/new.
+    Interactive (server) rendering so the search box filters the list while typing.
+    The matching rule is in ProductSearch (Application layer).
+*@
 
 <PageTitle>Products – KemiKoll</PageTitle>
 
@@ -32,6 +37,22 @@ else
         }
     </p>
 
+    <div class="search">
+        <label for="product-search" class="visually-hidden">Search products</label>
+        <input id="product-search" type="search" placeholder="Search name, supplier or code, e.g. aspen H225"
+               @bind="_searchText" @bind:event="oninput" />
+        @if (VisibleProducts.Count != _products.Count)
+        {
+            <small>Showing @VisibleProducts.Count of @_products.Count</small>
+        }
+    </div>
+
+    @if (VisibleProducts.Count == 0)
+    {
+        <p class="empty">No products match "@_searchText.Trim()".</p>
+    }
+    else
+    {
     <table class="products">
         <thead>
             <tr>
@@ -45,7 +66,7 @@ else
             </tr>
         </thead>
         <tbody>
-            @foreach (var product in _products)
+            @foreach (var product in VisibleProducts)
             {
                 <tr @key="product.Id">
                     <td class="name">@product.Name</td>
@@ -105,11 +126,17 @@ else
             }
         </tbody>
     </table>
+    }
 }
 
 @code {
     // null = still loading; an empty list = loaded, but there are no products.
     private IReadOnlyList<ProductSummary>? _products;
+
+    // The search text; the table shows only the matching products.
+    private string _searchText = string.Empty;
+
+    private IReadOnlyList<ProductSummary> VisibleProducts => ProductSearch.Filter(_products ?? [], _searchText);
 
     protected override async Task OnInitializedAsync()
     {
