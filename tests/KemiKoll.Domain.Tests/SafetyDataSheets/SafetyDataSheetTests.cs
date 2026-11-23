@@ -108,4 +108,37 @@ public class SafetyDataSheetTests
     {
         Assert.Throws<ArgumentNullException>(() => CreateSheet().IsDueForReview(new DateOnly(2027, 1, 1), null!));
     }
+
+    [Fact]
+    public void Correct_ValidValues_ChangesDateAndLanguageOnly()
+    {
+        var sheet = CreateSheet(languageCode: "en");
+        var id = sheet.Id;
+
+        sheet.Correct(new DateOnly(2025, 8, 7), " SV ");
+
+        Assert.Equal(id, sheet.Id);
+        Assert.Equal(new DateOnly(2025, 8, 7), sheet.RevisionDate);
+        Assert.Equal("sv", sheet.LanguageCode);
+        Assert.Equal("degreaser.pdf", sheet.FileName);
+    }
+
+    [Fact]
+    public void Correct_InvalidLanguage_ChangesNothing()
+    {
+        var sheet = CreateSheet();
+
+        Assert.Throws<ArgumentException>(() => sheet.Correct(new DateOnly(2025, 8, 7), "swedish"));
+
+        // The date is validated together with the language, so it did not change either.
+        Assert.Equal(RevisionDate, sheet.RevisionDate);
+        Assert.Equal("sv", sheet.LanguageCode);
+    }
+
+    [Fact]
+    public void Correct_MissingDate_Throws()
+    {
+        var exception = Assert.Throws<ArgumentException>(() => CreateSheet().Correct(default, "sv"));
+        Assert.Equal("revisionDate", exception.ParamName);
+    }
 }

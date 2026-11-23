@@ -26,6 +26,7 @@ builder.Services.AddScoped<AddProduct>();
 builder.Services.AddScoped<ListProducts>();
 builder.Services.AddScoped<EditProduct>();
 builder.Services.AddScoped<AddSafetyDataSheet>();
+builder.Services.AddScoped<ManageDataSheets>();
 builder.Services.AddScoped<ReadSafetyDataSheet>();
 
 var app = builder.Build();

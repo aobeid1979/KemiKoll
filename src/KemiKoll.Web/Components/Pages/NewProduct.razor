@@ -66,7 +66,7 @@
                 <div class="field">
                     <label for="language">Language</label>
                     <select id="language" @bind="_languageCode">
-                        @foreach (var (languageCode, languageName) in Languages)
+                        @foreach (var (languageCode, languageName) in Languages.All)
                         {
                             <option value="@languageCode">@languageName</option>
                         }
@@ -104,9 +104,6 @@
 @code {
     // The same limit as the PDF reader; the browser stops sending larger files early.
     private const long MaxUploadBytes = 20 * 1024 * 1024;
-
-    private static readonly (string Code, string Name)[] Languages =
-        [("sv", "Swedish"), ("en", "English"), ("no", "Norwegian"), ("da", "Danish"), ("fi", "Finnish"), ("de", "German")];
 
     private readonly ProductFormModel _form = new();
     private IReadOnlyList<string> _errors = [];
