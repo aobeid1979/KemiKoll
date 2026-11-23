@@ -2,6 +2,7 @@ using KemiKoll.Application.Documents;
 using KemiKoll.Application.Products;
 using KemiKoll.Application.SafetyDataSheets;
 using KemiKoll.Infrastructure;
+using KemiKoll.Infrastructure.Persistence;
 using KemiKoll.Web;
 using KemiKoll.Web.Components;
 using KemiKoll.Web.Development;
@@ -34,6 +35,22 @@ var app = builder.Build();
 StartupLog.Storage(
     app.Logger,
     string.IsNullOrWhiteSpace(connectionString) ? "in memory (data is lost on restart)" : "PostgreSQL");
+
+// Check the database once at startup. If it cannot be used, stop with one clear message
+// instead of failing later with a long technical error on the first page.
+var database = await app.Services.CheckDatabaseAsync();
+switch (database.State)
+{
+    case DatabaseState.Unreachable:
+        StartupLog.DatabaseUnreachable(app.Logger, database.Server);
+        Environment.ExitCode = 1;
+        return;
+    case DatabaseState.PendingMigrations:
+        var missing = string.Join(", ", database.PendingMigrations);
+        StartupLog.PendingMigrations(app.Logger, missing);
+        Environment.ExitCode = 1;
+        return;
+}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

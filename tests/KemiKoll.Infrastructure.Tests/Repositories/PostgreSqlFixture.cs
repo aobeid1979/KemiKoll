@@ -15,6 +15,9 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
 {
     private readonly PostgreSqlContainer _container = new PostgreSqlBuilder("postgres:17").Build();
 
+    /// <summary>The connection string of the test database (with a random password from Testcontainers).</summary>
+    public string ConnectionString => _container.GetConnectionString();
+
     /// <summary>Creates a new context connected to the test database.</summary>
     public KemiKollDbContext CreateContext() =>
         new(new DbContextOptionsBuilder<KemiKollDbContext>()

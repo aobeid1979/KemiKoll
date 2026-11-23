@@ -146,6 +146,10 @@ dotnet user-secrets set "ConnectionStrings:KemiKoll" "Host=localhost;Port=5432;D
 When the app starts, the log shows **`Storage: PostgreSQL`** (or `Storage: in memory` if no
 connection string is set). To go back to in-memory storage:
 
+At startup the app checks the database and stops with one clear message if it cannot be used:
+*Cannot reach the PostgreSQL database …* → start Docker and run `docker compose up -d`;
+*The database is missing these migrations …* → run `dotnet ef database update` (see above).
+
 ```bash
 dotnet user-secrets remove "ConnectionStrings:KemiKoll" --project src/KemiKoll.Web
 ```
