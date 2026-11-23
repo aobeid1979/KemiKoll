@@ -93,6 +93,18 @@
         </div>
     }
 
+    @if (_duplicateOfProductId is { } existingId)
+    {
+        <div class="duplicate" role="alert">
+            <strong>@_form.Name.Trim() from @_form.Supplier.Trim() is already in the inventory.</strong>
+            <p>
+                <a href="products/@existingId/edit">Open the existing product</a>
+                (for example to add a newer data sheet), or save this one as a second product.
+            </p>
+            <button type="button" disabled="@_isSaving" @onclick="SaveAnywayAsync">Save anyway</button>
+        </div>
+    }
+
     <div class="actions">
         <button type="submit" class="primary" disabled="@(_isSaving || _isReading)">
             @(_isSaving ? "Saving…" : "Save product")
@@ -108,6 +120,9 @@
     private readonly ProductFormModel _form = new();
     private IReadOnlyList<string> _errors = [];
     private bool _isSaving;
+
+    // Set when the last save found the same name and supplier; the user decides what to do.
+    private Guid? _duplicateOfProductId;
 
     // Data sheet upload state. _dataSheetFileName is set once a PDF was read successfully.
     private bool _isReading;
@@ -163,6 +178,7 @@
         _languageCode = extraction.LanguageCode ?? "sv";
         _warnings = extraction.Warnings;
         _errors = [];
+        _duplicateOfProductId = null;
     }
 
     private void RemoveDataSheet()
@@ -172,8 +188,14 @@
         _warnings = [];
     }
 
-    private async Task SaveAsync()
+    // The form submit always checks for duplicates; "Save anyway" skips that check.
+    private Task SaveAsync() => SaveProductAsync(allowDuplicate: false);
+
+    private Task SaveAnywayAsync() => SaveProductAsync(allowDuplicate: true);
+
+    private async Task SaveProductAsync(bool allowDuplicate)
     {
+        _duplicateOfProductId = null;
         if (_dataSheetFileName is not null && _revisionDate is null)
         {
             _errors = ["Enter the revision date of the data sheet, or remove the data sheet."];
@@ -192,7 +214,8 @@
                 _form.Supplier,
                 _form.HazardCodeList(),
                 _form.PictogramCodeList(),
-                dataSheet);
+                dataSheet,
+                allowDuplicate);
 
             var result = await AddProductUseCase.ExecuteAsync(command);
 
@@ -203,6 +226,7 @@
             }
 
             _errors = result.Errors;
+            _duplicateOfProductId = result.DuplicateOfProductId;
         }
         finally
         {

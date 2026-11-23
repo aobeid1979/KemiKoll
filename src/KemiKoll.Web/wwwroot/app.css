@@ -127,6 +127,19 @@ h1:focus {
     padding-left: 1.2rem;
 }
 
+.product-form .duplicate {
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid #e6c36a;
+    border-radius: 4px;
+    background: #fff6dc;
+    color: #5c4300;
+}
+
+.product-form .duplicate p {
+    margin: 0.4rem 0 0.6rem;
+}
+
 .product-form .actions {
     display: flex;
     align-items: center;
