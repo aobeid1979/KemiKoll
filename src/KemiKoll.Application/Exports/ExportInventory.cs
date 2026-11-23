@@ -19,16 +19,20 @@ public sealed class ExportInventory(
     /// <summary>The MIME type of .xlsx files.</summary>
     public const string ExcelContentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
-    /// <summary>Creates the Excel file with all products, sorted by name.</summary>
+    /// <summary>Creates the Excel file with the selected products, sorted by name.</summary>
+    /// <param name="selection">Which products: the same search and quick filter as on the list. <see langword="null"/> = all.</param>
     /// <param name="cancellationToken">Cancels the operation.</param>
     /// <returns>The file, named after today's date.</returns>
-    public async Task<ExportedFile> ToExcelAsync(CancellationToken cancellationToken = default)
+    public async Task<ExportedFile> ToExcelAsync(InventorySelection? selection = null, CancellationToken cancellationToken = default)
     {
-        var products = await listProducts.ExecuteAsync(cancellationToken).ConfigureAwait(false);
+        selection ??= InventorySelection.Everything;
+
+        var allProducts = await listProducts.ExecuteAsync(cancellationToken).ConfigureAwait(false);
+        var products = ProductSearch.Filter(allProducts, selection.SearchText, selection.Filter);
         var today = DateOnly.FromDateTime(timeProvider.GetLocalNow().DateTime);
 
         using var output = new MemoryStream();
-        writer.Write(products, today, output);
+        writer.Write(new InventorySheet(products, today, selection.Describe()), output);
 
         var fileName = $"kemikoll-inventory-{today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)}.xlsx";
         return new ExportedFile(fileName, ExcelContentType, output.ToArray());

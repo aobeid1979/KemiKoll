@@ -74,10 +74,12 @@ app.UseAntiforgery();
 
 app.MapStaticAssets();
 
-// Download the whole inventory as an Excel file (the "Export to Excel" button on /products).
-app.MapGet("/products/export.xlsx", async (ExportInventory export, CancellationToken cancellationToken) =>
+// Download the inventory as an Excel file (the "Export to Excel" button on /products).
+// ?q= and ?filter= are the search text and quick filter shown on the list, so the file has what the user sees.
+app.MapGet("/products/export.xlsx", async (ExportInventory export, string? q, ProductFilter? filter, CancellationToken cancellationToken) =>
 {
-    var file = await export.ToExcelAsync(cancellationToken);
+    var selection = new InventorySelection(q, filter ?? ProductFilter.All);
+    var file = await export.ToExcelAsync(selection, cancellationToken);
     return Results.File(file.Content, file.ContentType, file.FileName);
 });
 

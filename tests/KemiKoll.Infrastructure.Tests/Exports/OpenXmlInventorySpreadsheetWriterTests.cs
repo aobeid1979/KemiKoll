@@ -1,6 +1,7 @@
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
 
+using KemiKoll.Application.Exports;
 using KemiKoll.Application.Products;
 using KemiKoll.Infrastructure.Exports;
 
@@ -18,10 +19,13 @@ public class OpenXmlInventorySpreadsheetWriterTests
         Guid.NewGuid(), "Skärolja", "Ståhl AB", [], [], false, DataSheetStatus.NotRequired, null, [], []);
 
     // Writes the file and opens it again, as Excel would. Returns the cells by reference ("A1" → text).
-    private static Dictionary<string, Cell> WriteAndRead(params ProductSummary[] products)
+    private static Dictionary<string, Cell> WriteAndRead(params ProductSummary[] products) =>
+        WriteAndRead(new InventorySheet(products, ExportDate));
+
+    private static Dictionary<string, Cell> WriteAndRead(InventorySheet sheet)
     {
         using var stream = new MemoryStream();
-        new OpenXmlInventorySpreadsheetWriter().Write(products, ExportDate, stream);
+        new OpenXmlInventorySpreadsheetWriter().Write(sheet, stream);
 
         stream.Position = 0;
         using var document = SpreadsheetDocument.Open(stream, isEditable: false);
@@ -81,5 +85,13 @@ public class OpenXmlInventorySpreadsheetWriterTests
 
         Assert.Equal("Exported 2026-11-23 · 0 products", Text(cells, "A2"));
         Assert.False(cells.ContainsKey("A5"));
+    }
+
+    [Fact]
+    public void Write_Selection_IsShownUnderTheTitle()
+    {
+        var cells = WriteAndRead(new InventorySheet([Bensin], ExportDate, "Hazardous · Search: aspen"));
+
+        Assert.Equal("Exported 2026-11-23 · 1 products · Hazardous · Search: aspen", Text(cells, "A2"));
     }
 }

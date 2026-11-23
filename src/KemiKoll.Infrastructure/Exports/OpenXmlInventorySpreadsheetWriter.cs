@@ -16,7 +16,7 @@ namespace KemiKoll.Infrastructure.Exports;
 /// Layout of the single sheet "Inventory":
 /// <code>
 /// Row 1  Chemical inventory (kemikalieförteckning)          (title)
-/// Row 2  Exported 2026-11-23 · 11 products
+/// Row 2  Exported 2026-11-23 · 11 products · Needs attention   (the selection, when filtered)
 /// Row 4  Product | Supplier | Hazard statements | …          (bold, filter buttons)
 /// Row 5… one row per product                                 (header stays visible when scrolling)
 /// </code>
@@ -45,10 +45,12 @@ public sealed class OpenXmlInventorySpreadsheetWriter : IInventorySpreadsheetWri
     ];
 
     /// <inheritdoc/>
-    public void Write(IReadOnlyList<ProductSummary> products, DateOnly exportDate, Stream output)
+    public void Write(InventorySheet sheet, Stream output)
     {
-        ArgumentNullException.ThrowIfNull(products);
+        ArgumentNullException.ThrowIfNull(sheet);
         ArgumentNullException.ThrowIfNull(output);
+
+        var products = sheet.Products;
 
         using var document = SpreadsheetDocument.Create(output, SpreadsheetDocumentType.Workbook);
         var workbookPart = document.AddWorkbookPart();
@@ -60,10 +62,13 @@ public sealed class OpenXmlInventorySpreadsheetWriter : IInventorySpreadsheetWri
         var worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
         var sheetData = new SheetData();
 
-        var exported = exportDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var exported = sheet.ExportDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var subtitle = sheet.Selection is null
+            ? $"Exported {exported} · {products.Count} products"
+            : $"Exported {exported} · {products.Count} products · {sheet.Selection}";
         sheetData.Append(
             NewRow(1, TextCell("A1", "Chemical inventory (kemikalieförteckning)", TitleStyle)),
-            NewRow(2, TextCell("A2", $"Exported {exported} · {products.Count} products", NormalStyle)),
+            NewRow(2, TextCell("A2", subtitle, NormalStyle)),
             NewRow(HeaderRow, ColumnLayout.Select((column, i) => TextCell(Reference(i, HeaderRow), column.Header, HeaderStyle))));
 
         var rowNumber = HeaderRow;

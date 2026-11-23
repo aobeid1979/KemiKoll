@@ -2,6 +2,7 @@ using KemiKoll.Application.Exports;
 using KemiKoll.Application.Products;
 using KemiKoll.Application.Tests.Products;
 using KemiKoll.Application.Tests.TestDoubles;
+using KemiKoll.Domain.Hazards;
 using KemiKoll.Domain.Products;
 
 namespace KemiKoll.Application.Tests.Exports;
@@ -43,19 +44,41 @@ public class ExportInventoryTests
         Assert.Equal(expected, _writer.Products.Select(p => p.Name));
     }
 
+    [Fact]
+    public async Task ToExcelAsync_Selection_ExportsOnlyMatchingProductsAndDescribesFilter()
+    {
+        _products.Products.Add(ChemicalProduct.Create("Bensin", "Aspen AB", [HazardStatement.Parse("H224")]));
+        _products.Products.Add(ChemicalProduct.Create("Alkylat", "Aspen AB", []));
+        _products.Products.Add(ChemicalProduct.Create("Aceton", "Kemetyl AB", [HazardStatement.Parse("H225")]));
+
+        await _export.ToExcelAsync(new InventorySelection(" aspen ", ProductFilter.Hazardous));
+
+        Assert.Equal("Bensin", Assert.Single(_writer.Products).Name);
+        Assert.Equal("Hazardous · Search: aspen", _writer.Sheet!.Selection);
+    }
+
+    [Fact]
+    public async Task ToExcelAsync_NoSelection_HasNoSelectionText()
+    {
+        await _export.ToExcelAsync();
+
+        Assert.Null(_writer.Sheet!.Selection);
+    }
+
     // Remembers what it was asked to write and writes a few fixed bytes.
     private sealed class RecordingWriter : IInventorySpreadsheetWriter
     {
         public static readonly byte[] Bytes = [1, 2, 3];
 
-        public IReadOnlyList<ProductSummary> Products { get; private set; } = [];
+        public InventorySheet? Sheet { get; private set; }
 
-        public DateOnly ExportDate { get; private set; }
+        public IReadOnlyList<ProductSummary> Products => Sheet?.Products ?? [];
 
-        public void Write(IReadOnlyList<ProductSummary> products, DateOnly exportDate, Stream output)
+        public DateOnly ExportDate => Sheet?.ExportDate ?? default;
+
+        public void Write(InventorySheet sheet, Stream output)
         {
-            Products = products;
-            ExportDate = exportDate;
+            Sheet = sheet;
             output.Write(Bytes);
         }
     }
