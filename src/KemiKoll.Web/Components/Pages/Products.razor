@@ -26,16 +26,21 @@ else if (_products.Count == 0)
 }
 else
 {
-    <p class="summary">
-        @_products.Count products, of which <strong>@_products.Count(p => p.IsHazardous) hazardous</strong>.
-        @{
-            var needAction = _products.Count(p => p.DataSheetStatus is DataSheetStatus.Missing or DataSheetStatus.DueForReview);
-        }
-        @if (needAction > 0)
-        {
-            <span class="attention">@needAction need attention.</span>
-        }
-    </p>
+    @* Quick filters with counts. They work together with the search box. *@
+    <div class="quick-filters" role="group" aria-label="Show">
+        <button type="button" class="@FilterClass(ProductFilter.All)" aria-pressed="@(_filter == ProductFilter.All)"
+                @onclick="() => _filter = ProductFilter.All">
+            All <span class="count">@_products.Count</span>
+        </button>
+        <button type="button" class="@FilterClass(ProductFilter.NeedsAttention) attention" aria-pressed="@(_filter == ProductFilter.NeedsAttention)"
+                @onclick="() => _filter = ProductFilter.NeedsAttention">
+            Needs attention <span class="count">@_products.Count(ProductSearch.NeedsAttention)</span>
+        </button>
+        <button type="button" class="@FilterClass(ProductFilter.Hazardous)" aria-pressed="@(_filter == ProductFilter.Hazardous)"
+                @onclick="() => _filter = ProductFilter.Hazardous">
+            Hazardous <span class="count">@_products.Count(p => p.IsHazardous)</span>
+        </button>
+    </div>
 
     <div class="search">
         <label for="product-search" class="visually-hidden">Search products</label>
@@ -49,7 +54,7 @@ else
 
     @if (VisibleProducts.Count == 0)
     {
-        <p class="empty">No products match "@_searchText.Trim()".</p>
+        <p class="empty">No products match this search and filter.</p>
     }
     else
     {
@@ -136,7 +141,12 @@ else
     // The search text; the table shows only the matching products.
     private string _searchText = string.Empty;
 
-    private IReadOnlyList<ProductSummary> VisibleProducts => ProductSearch.Filter(_products ?? [], _searchText);
+    // The selected quick filter.
+    private ProductFilter _filter = ProductFilter.All;
+
+    private IReadOnlyList<ProductSummary> VisibleProducts => ProductSearch.Filter(_products ?? [], _searchText, _filter);
+
+    private string FilterClass(ProductFilter filter) => filter == _filter ? "filter selected" : "filter";
 
     protected override async Task OnInitializedAsync()
     {
