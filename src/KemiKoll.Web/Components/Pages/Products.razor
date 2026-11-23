@@ -15,7 +15,8 @@
     <h1>Chemical products</h1>
     <div class="header-actions">
         @* A normal download link: "download" and data-enhance-nav="false" keep Blazor from handling it as a page. *@
-        <a class="button secondary" href="products/export.xlsx" download data-enhance-nav="false">Export to Excel</a>
+        <a class="button secondary" href="@ExportUrl" download data-enhance-nav="false"
+           title="Exports the products shown in the list">Export to Excel</a>
         <a class="button" href="products/new">+ Add product</a>
     </div>
 </div>
@@ -149,6 +150,26 @@ else
     private ProductFilter _filter = ProductFilter.All;
 
     private IReadOnlyList<ProductSummary> VisibleProducts => ProductSearch.Filter(_products ?? [], _searchText, _filter);
+
+    // The export link carries the current search and quick filter, so the file has what the list shows.
+    private string ExportUrl
+    {
+        get
+        {
+            var query = new List<string>();
+            if (!string.IsNullOrWhiteSpace(_searchText))
+            {
+                query.Add("q=" + Uri.EscapeDataString(_searchText.Trim()));
+            }
+
+            if (_filter != ProductFilter.All)
+            {
+                query.Add("filter=" + _filter);
+            }
+
+            return query.Count == 0 ? "products/export.xlsx" : "products/export.xlsx?" + string.Join("&", query);
+        }
+    }
 
     private string FilterClass(ProductFilter filter) => filter == _filter ? "filter selected" : "filter";
 
