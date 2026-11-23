@@ -1,5 +1,3 @@
-using KemiKoll.Application.Products;
-
 namespace KemiKoll.Application.Exports;
 
 /// <summary>
@@ -11,9 +9,8 @@ namespace KemiKoll.Application.Exports;
 /// </remarks>
 public interface IInventorySpreadsheetWriter
 {
-    /// <summary>Writes one row per product, with a title and the export date above the table.</summary>
-    /// <param name="products">The products, in the order they should appear.</param>
-    /// <param name="exportDate">The date printed in the file.</param>
+    /// <summary>Writes one row per product, with a title, the export date and the selection above the table.</summary>
+    /// <param name="sheet">The products and the lines above the table.</param>
     /// <param name="output">The stream to write the .xlsx file to.</param>
-    void Write(IReadOnlyList<ProductSummary> products, DateOnly exportDate, Stream output);
+    void Write(InventorySheet sheet, Stream output);
 }
