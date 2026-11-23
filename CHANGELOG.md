@@ -16,6 +16,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - **Edit and delete products**: "Edit" link in the product list, edit page with the same form and CLP check, delete with confirmation (data sheets are deleted too).
 - **Data sheets on the edit page**: list (newest first, older kept as history), correct revision date and language, remove with confirmation, add a newer version by uploading its PDF — with an offer to take over its H-codes and pictograms when they differ.
 
+- Products remember when they were added and last edited (`AddedAt`, `LastChangedAt`; migration `AddProductDates`, existing products get the migration time). Shown on the edit page. Saving without changes keeps the old date.
 - "Export to Excel" exports what the list shows: the current search and quick filter are used, and written under the title in the file.
 - "Export to Excel" on the product list: downloads the whole inventory (kemikalieförteckning) as an .xlsx file with title, export date, filter buttons and a frozen header row (`ExportInventory`, `OpenXmlInventorySpreadsheetWriter`, DocumentFormat.OpenXml 3.5.1, MIT).
 - Quick filters above the product list (All, Needs attention, Hazardous) with counts; they replace the summary line and work together with the search box.

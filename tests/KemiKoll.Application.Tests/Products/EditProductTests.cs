@@ -8,6 +8,10 @@ namespace KemiKoll.Application.Tests.Products;
 
 public class EditProductTests
 {
+    private static readonly DateTimeOffset Added = new(2026, 11, 1, 9, 0, 0, TimeSpan.Zero);
+    private static readonly DateOnly Today = new(2026, 11, 23);
+    private static readonly DateTimeOffset Now = new(2026, 11, 23, 12, 0, 0, TimeSpan.Zero); // FixedTimeProvider: noon UTC
+
     private readonly FakeProductRepository _products = new();
     private readonly FakeSafetyDataSheetRepository _sheets = new();
     private readonly EditProduct _editProduct;
@@ -15,10 +19,10 @@ public class EditProductTests
 
     public EditProductTests()
     {
-        _editProduct = new EditProduct(_products, _sheets);
+        _editProduct = new EditProduct(_products, _sheets, new FixedTimeProvider(Today));
 
         // The mistake found in real use: H225 with GHS03 instead of GHS02.
-        _ethanol = ChemicalProduct.Create("Ethanol", "Amfo Company", [HazardStatement.Parse("H225")]);
+        _ethanol = ChemicalProduct.Create("Ethanol", "Amfo Company", [HazardStatement.Parse("H225")], Added);
         _ethanol.AddPictogram(Pictogram.FlameOverCircle);
         _products.Products.Add(_ethanol);
     }
@@ -110,5 +114,27 @@ public class EditProductTests
     {
         Assert.False(await _editProduct.DeleteAsync(Guid.NewGuid()));
         Assert.Single(_products.Products);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_RealChange_SetsLastChangedAtToNow()
+    {
+        await _editProduct.UpdateAsync(Command(name: "Ethanol absolute"));
+
+        var details = await _editProduct.GetAsync(_ethanol.Id);
+        Assert.Equal(Added, details!.AddedAt);
+        Assert.Equal(Now, details.LastChangedAt);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_NoChange_KeepsLastChangedAt()
+    {
+        // Make the product equal to the command (GHS02 instead of GHS03), dated when it was added.
+        _ethanol.Update("Ethanol", "Amfo Company", [HazardStatement.Parse("H225")], [Pictogram.Flame], Added);
+
+        var result = await _editProduct.UpdateAsync(Command());
+
+        Assert.True(result.Succeeded);
+        Assert.Equal(Added, _ethanol.LastChangedAt);
     }
 }

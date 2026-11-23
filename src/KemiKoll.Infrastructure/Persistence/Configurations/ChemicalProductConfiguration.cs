@@ -47,6 +47,13 @@ internal sealed class ChemicalProductConfiguration : IEntityTypeConfiguration<Ch
             .HasMaxLength(ChemicalProduct.MaxTextLength)
             .IsRequired();
 
+        // timestamp with time zone; the domain always stores UTC, as Npgsql requires.
+        builder.Property(product => product.AddedAt)
+            .HasColumnName("added_at");
+
+        builder.Property(product => product.LastChangedAt)
+            .HasColumnName("last_changed_at");
+
         // The public lists are read-only views of private fields; EF Core works with the fields.
         builder.Ignore(product => product.HazardStatements);
         builder.Ignore(product => product.Pictograms);

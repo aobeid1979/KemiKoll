@@ -47,3 +47,10 @@ button.link {
     text-decoration: underline;
     cursor: pointer;
 }
+
+/* "Added … · Last edited …" under the heading. */
+.dates {
+    margin-top: -0.5rem;
+    color: #666;
+    font-size: 0.9rem;
+}

@@ -33,7 +33,7 @@ public sealed class KemiKollDbContextTests : IDisposable
         var entity = EntityType<ChemicalProduct>();
 
         Assert.Equal("products", entity.GetTableName());
-        string[] expected = ["hazard_statements", "id", "name", "pictograms", "supplier"];
+        string[] expected = ["added_at", "hazard_statements", "id", "last_changed_at", "name", "pictograms", "supplier"];
         Assert.Equal(expected, entity.GetProperties().Select(p => p.GetColumnName()).Order());
     }
 
@@ -62,6 +62,8 @@ public sealed class KemiKollDbContextTests : IDisposable
         Assert.Contains("pictograms text[] NOT NULL", sql, StringComparison.Ordinal);
         Assert.Contains("revision_date date NOT NULL", sql, StringComparison.Ordinal);
         Assert.Contains("name character varying(200) NOT NULL", sql, StringComparison.Ordinal);
+        Assert.Contains("added_at timestamp with time zone NOT NULL", sql, StringComparison.Ordinal);
+        Assert.Contains("last_changed_at timestamp with time zone NOT NULL", sql, StringComparison.Ordinal);
     }
 
     [Fact]

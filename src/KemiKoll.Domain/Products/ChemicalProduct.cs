@@ -29,11 +29,13 @@ public sealed class ChemicalProduct
     [SuppressMessage("Style", "IDE0044:Make field readonly", Justification = "Set by EF Core when loading from the database.")]
     private List<Pictogram> _pictograms = [];
 
-    private ChemicalProduct(Guid id, string name, string supplier)
+    private ChemicalProduct(Guid id, string name, string supplier, DateTimeOffset addedAt)
     {
         Id = id;
         Name = name;
         Supplier = supplier;
+        AddedAt = addedAt;
+        LastChangedAt = addedAt;
     }
 
     /// <summary>The unique identity of the product.</summary>
@@ -44,6 +46,15 @@ public sealed class ChemicalProduct
 
     /// <summary>The company that supplies the product and issues its safety data sheet.</summary>
     public string Supplier { get; private set; }
+
+    /// <summary>When the product was added to the inventory (UTC).</summary>
+    public DateTimeOffset AddedAt { get; private set; }
+
+    /// <summary>
+    /// When the product details were last changed with <see cref="Update"/> (UTC).
+    /// Equal to <see cref="AddedAt"/> until the first real change.
+    /// </summary>
+    public DateTimeOffset LastChangedAt { get; private set; }
 
     /// <summary>The hazard statements (H-phrases) of the product, in the order they were added.</summary>
     public IReadOnlyList<HazardStatement> HazardStatements => _hazardStatements;
@@ -63,6 +74,10 @@ public sealed class ChemicalProduct
     /// <param name="name">The trade name. Surrounding spaces are removed.</param>
     /// <param name="supplier">The supplier. Surrounding spaces are removed.</param>
     /// <param name="hazardStatements">Optional hazard statements. Duplicates are ignored.</param>
+    /// <param name="addedAt">
+    /// When the product is added. Use cases pass the time from their clock (TimeProvider);
+    /// when left out, the current time is used.
+    /// </param>
     /// <returns>The new product with a new <see cref="Id"/>.</returns>
     /// <exception cref="ArgumentException">
     /// <paramref name="name"/> or <paramref name="supplier"/> is empty or longer than <see cref="MaxTextLength"/>.
@@ -70,13 +85,16 @@ public sealed class ChemicalProduct
     public static ChemicalProduct Create(
         string name,
         string supplier,
-        IEnumerable<HazardStatement>? hazardStatements = null)
+        IEnumerable<HazardStatement>? hazardStatements = null,
+        DateTimeOffset? addedAt = null)
     {
         // Version 7 GUIDs are sorted by creation time, which keeps database indexes efficient.
+        // Times are stored in UTC; screens convert them to local time.
         var product = new ChemicalProduct(
             Guid.CreateVersion7(),
             ValidateText(name, nameof(name)),
-            ValidateText(supplier, nameof(supplier)));
+            ValidateText(supplier, nameof(supplier)),
+            (addedAt ?? DateTimeOffset.UtcNow).ToUniversalTime());
 
         foreach (var statement in hazardStatements ?? [])
         {
@@ -102,19 +120,24 @@ public sealed class ChemicalProduct
     /// <remarks>
     /// Every value is validated <b>before</b> anything changes, so a failed update leaves the
     /// product exactly as it was. Duplicates are ignored and the order of the lists is kept.
+    /// <see cref="LastChangedAt"/> is only moved when something really changed,
+    /// so saving the form without changes keeps the old date.
     /// </remarks>
     /// <param name="name">The new trade name. Surrounding spaces are removed.</param>
     /// <param name="supplier">The new supplier. Surrounding spaces are removed.</param>
     /// <param name="hazardStatements">The complete new list of hazard statements.</param>
     /// <param name="pictograms">The complete new list of pictograms.</param>
+    /// <param name="changedAt">When the change is made, from the use case's clock.</param>
+    /// <returns><see langword="true"/> if something changed; <see langword="false"/> if all values were the same.</returns>
     /// <exception cref="ArgumentException"><paramref name="name"/> or <paramref name="supplier"/> is empty or too long.</exception>
     /// <exception cref="ArgumentNullException">A list is <see langword="null"/> or contains <see langword="null"/>.</exception>
     /// <exception cref="ArgumentOutOfRangeException">A pictogram is not a defined GHS pictogram.</exception>
-    public void Update(
+    public bool Update(
         string name,
         string supplier,
         IEnumerable<HazardStatement> hazardStatements,
-        IEnumerable<Pictogram> pictograms)
+        IEnumerable<Pictogram> pictograms,
+        DateTimeOffset changedAt)
     {
         ArgumentNullException.ThrowIfNull(hazardStatements);
         ArgumentNullException.ThrowIfNull(pictograms);
@@ -142,11 +165,23 @@ public sealed class ChemicalProduct
             }
         }
 
-        // Everything is valid: now change the product.
+        var changed =
+            validName != Name ||
+            validSupplier != Supplier ||
+            !newStatements.SequenceEqual(_hazardStatements) ||
+            !newPictograms.SequenceEqual(_pictograms);
+        if (!changed)
+        {
+            return false;
+        }
+
+        // Everything is valid and different: now change the product.
         Name = validName;
         Supplier = validSupplier;
         _hazardStatements = newStatements;
         _pictograms = newPictograms;
+        LastChangedAt = changedAt.ToUniversalTime();
+        return true;
     }
 
     /// <summary>Adds a hazard statement unless the product already has it.</summary>

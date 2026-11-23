@@ -8,6 +8,10 @@ public class ChemicalProductTests
     private static readonly HazardStatement H225 = HazardStatement.Parse("H225");
     private static readonly HazardStatement H315 = HazardStatement.Parse("H315");
 
+    // Fixed times for the AddedAt / LastChangedAt tests. Swedish winter time is UTC+1.
+    private static readonly DateTimeOffset Added = new(2026, 11, 21, 10, 0, 0, TimeSpan.FromHours(1));
+    private static readonly DateTimeOffset Later = new(2026, 11, 23, 12, 0, 0, TimeSpan.Zero);
+
     [Fact]
     public void Create_ValidInput_SetsProperties()
     {
@@ -224,7 +228,7 @@ public class ChemicalProductTests
         product.AddPictogram(Pictogram.FlameOverCircle);
         var id = product.Id;
 
-        product.Update(" Ethanol absolute ", " New AB ", [H225, H225], [Pictogram.Flame, Pictogram.Flame]);
+        product.Update(" Ethanol absolute ", " New AB ", [H225, H225], [Pictogram.Flame, Pictogram.Flame], Later);
 
         Assert.Equal(id, product.Id);
         Assert.Equal("Ethanol absolute", product.Name);
@@ -239,7 +243,7 @@ public class ChemicalProductTests
         var product = ChemicalProduct.Create("Solvent", "Supplier", [H225]);
         product.AddPictogram(Pictogram.Flame);
 
-        product.Update("Solvent", "Supplier", [], []);
+        product.Update("Solvent", "Supplier", [], [], Later);
 
         Assert.Empty(product.HazardStatements);
         Assert.Empty(product.Pictograms);
@@ -251,7 +255,7 @@ public class ChemicalProductTests
     {
         var product = ChemicalProduct.Create("Ethanol", "Old AB", [H315]);
 
-        Assert.Throws<ArgumentException>(() => product.Update("New name", " ", [H225], [Pictogram.Flame]));
+        Assert.Throws<ArgumentException>(() => product.Update("New name", " ", [H225], [Pictogram.Flame], Later));
 
         // Validation happens before any change, so the name was not changed either.
         Assert.Equal("Ethanol", product.Name);
@@ -265,8 +269,40 @@ public class ChemicalProductTests
     {
         var product = ChemicalProduct.Create("Ethanol", "Old AB");
 
-        Assert.Throws<ArgumentOutOfRangeException>(() => product.Update("New name", "New AB", [], [(Pictogram)42]));
+        Assert.Throws<ArgumentOutOfRangeException>(() => product.Update("New name", "New AB", [], [(Pictogram)42], Later));
 
         Assert.Equal("Ethanol", product.Name);
+    }
+
+    [Fact]
+    public void Create_SetsAddedAtAndLastChangedAtInUtc()
+    {
+        var product = ChemicalProduct.Create("Solvent", "Supplier", addedAt: Added);
+
+        Assert.Equal(Added, product.AddedAt);
+        Assert.Equal(TimeSpan.Zero, product.AddedAt.Offset);
+        Assert.Equal(product.AddedAt, product.LastChangedAt);
+    }
+
+    [Fact]
+    public void Update_RealChange_MovesLastChangedAtButNotAddedAt()
+    {
+        var product = ChemicalProduct.Create("Solvent", "Supplier", addedAt: Added);
+
+        Assert.True(product.Update("Solvent", "Other AB", [], [], Later));
+
+        Assert.Equal(Added, product.AddedAt);
+        Assert.Equal(Later, product.LastChangedAt);
+    }
+
+    [Fact]
+    public void Update_SameValues_ReturnsFalseAndKeepsLastChangedAt()
+    {
+        var product = ChemicalProduct.Create("Solvent", "Supplier", [H225], Added);
+        product.AddPictogram(Pictogram.Flame);
+
+        Assert.False(product.Update(" Solvent ", "Supplier", [H225], [Pictogram.Flame], Later));
+
+        Assert.Equal(Added, product.LastChangedAt);
     }
 }
