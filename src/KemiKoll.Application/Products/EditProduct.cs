@@ -11,12 +11,16 @@ namespace KemiKoll.Application.Products;
 /// <param name="Supplier">The supplier.</param>
 /// <param name="HazardCodes">Hazard statement codes, for example "H225".</param>
 /// <param name="PictogramCodes">GHS pictogram codes, for example "GHS02".</param>
+/// <param name="AddedAt">When the product was added (UTC).</param>
+/// <param name="LastChangedAt">When the product details were last changed (UTC).</param>
 public sealed record ProductDetails(
     Guid Id,
     string Name,
     string Supplier,
     IReadOnlyList<string> HazardCodes,
-    IReadOnlyList<string> PictogramCodes);
+    IReadOnlyList<string> PictogramCodes,
+    DateTimeOffset AddedAt,
+    DateTimeOffset LastChangedAt);
 
 /// <summary>
 /// The new details of an existing product, as entered by the user.
@@ -64,7 +68,8 @@ public sealed record UpdateProductResult
 /// </summary>
 /// <param name="products">Where products are stored.</param>
 /// <param name="sheets">Where safety data sheets are stored; deleted together with their product.</param>
-public sealed class EditProduct(IProductRepository products, ISafetyDataSheetRepository sheets)
+/// <param name="timeProvider">Gives the time of a change. Injected so tests can use a fixed time.</param>
+public sealed class EditProduct(IProductRepository products, ISafetyDataSheetRepository sheets, TimeProvider timeProvider)
 {
     /// <summary>Loads a product for the edit form.</summary>
     /// <param name="id">The product id.</param>
@@ -80,7 +85,9 @@ public sealed class EditProduct(IProductRepository products, ISafetyDataSheetRep
                 product.Name,
                 product.Supplier,
                 product.HazardStatements.Select(statement => statement.Code).ToList(),
-                product.Pictograms.Select(pictogram => pictogram.ToCode()).ToList());
+                product.Pictograms.Select(pictogram => pictogram.ToCode()).ToList(),
+                product.AddedAt,
+                product.LastChangedAt);
     }
 
     /// <summary>Validates the new details and saves them. Nothing changes if any value is invalid.</summary>
@@ -105,13 +112,20 @@ public sealed class EditProduct(IProductRepository products, ISafetyDataSheetRep
             return UpdateProductResult.Failure(errors);
         }
 
+        bool changed;
         try
         {
-            product.Update(command.Name, command.Supplier, hazardStatements, pictograms);
+            changed = product.Update(command.Name, command.Supplier, hazardStatements, pictograms, timeProvider.GetUtcNow());
         }
         catch (ArgumentException exception)
         {
             return UpdateProductResult.Failure([UserMessages.From(exception)]);
+        }
+
+        // Nothing changed: nothing to save, and "last edited" keeps its old date.
+        if (!changed)
+        {
+            return UpdateProductResult.Success();
         }
 
         var saved = await products.UpdateAsync(product, cancellationToken).ConfigureAwait(false);

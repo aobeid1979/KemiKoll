@@ -10,7 +10,7 @@ public class AddProductTests
     private readonly FakeSafetyDataSheetRepository _sheets = new();
     private readonly AddProduct _addProduct;
 
-    public AddProductTests() => _addProduct = new AddProduct(_repository, _sheets);
+    public AddProductTests() => _addProduct = new AddProduct(_repository, _sheets, new FixedTimeProvider(new DateOnly(2026, 11, 23)));
 
     private static AddProductCommand Command(
         string name = "Degreaser X",
@@ -176,5 +176,16 @@ public class AddProductTests
 
         Assert.False(second.IsDuplicate);
         Assert.NotEmpty(second.Errors);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SetsAddedAtFromTheClock()
+    {
+        await _addProduct.ExecuteAsync(Command());
+
+        var expected = new DateTimeOffset(2026, 11, 23, 12, 0, 0, TimeSpan.Zero);
+        var saved = Assert.Single(_repository.Products);
+        Assert.Equal(expected, saved.AddedAt);
+        Assert.Equal(expected, saved.LastChangedAt);
     }
 }

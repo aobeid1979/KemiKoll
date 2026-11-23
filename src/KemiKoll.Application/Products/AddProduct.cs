@@ -83,7 +83,8 @@ public sealed record AddProductResult
 /// </remarks>
 /// <param name="repository">Where products are stored.</param>
 /// <param name="sheets">Where safety data sheets are stored, when the command includes one.</param>
-public sealed class AddProduct(IProductRepository repository, ISafetyDataSheetRepository sheets)
+/// <param name="timeProvider">Gives the time the product is added. Injected so tests can use a fixed time.</param>
+public sealed class AddProduct(IProductRepository repository, ISafetyDataSheetRepository sheets, TimeProvider timeProvider)
 {
     /// <summary>
     /// Validates the input, creates the product and saves it, together with its data sheet if one is given.
@@ -102,7 +103,7 @@ public sealed class AddProduct(IProductRepository repository, ISafetyDataSheetRe
         ChemicalProduct? product = null;
         try
         {
-            product = ChemicalProduct.Create(command.Name, command.Supplier, hazardStatements);
+            product = ChemicalProduct.Create(command.Name, command.Supplier, hazardStatements, timeProvider.GetUtcNow());
         }
         catch (ArgumentException exception)
         {
