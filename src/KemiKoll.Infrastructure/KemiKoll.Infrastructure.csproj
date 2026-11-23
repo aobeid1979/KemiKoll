@@ -14,6 +14,9 @@
     <!-- Reads the text of PDF files (safety data sheets). Apache-2.0 license. -->
     <PackageReference Include="PdfPig" Version="0.1.16" />
 
+    <!-- Writes Excel (.xlsx) files: the inventory export. Microsoft, MIT license. -->
+    <PackageReference Include="DocumentFormat.OpenXml" Version="3.5.1" />
+
     <!--
       Needed only by the "dotnet ef" command-line tool to create migrations.
       PrivateAssets="all" keeps it out of the projects that reference Infrastructure (Web).
