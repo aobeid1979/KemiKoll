@@ -20,8 +20,60 @@
     background: #173b5c;
 }
 
-.summary {
-    color: #444;
+/* Quick filters and search box above the table. */
+.quick-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.quick-filters .filter {
+    padding: 0.35rem 0.8rem;
+    border: 1px solid #bbb;
+    border-radius: 999px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.quick-filters .filter .count {
+    margin-left: 0.3rem;
+    font-weight: 600;
+}
+
+.quick-filters .filter.attention .count {
+    color: #a15c00;
+}
+
+.quick-filters .filter.selected {
+    border-color: #1f4e78;
+    background: #1f4e78;
+    color: #fff;
+}
+
+.quick-filters .filter.selected .count {
+    color: #fff;
+}
+
+.search {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.search input {
+    width: 100%;
+    max-width: 28rem;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid #bbb;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.search small {
+    color: #555;
+    white-space: nowrap;
 }
 
 .empty {
@@ -111,12 +163,6 @@
 .not-required {
     color: #888;
     font-size: 0.85rem;
-}
-
-.attention {
-    margin-left: 0.5rem;
-    color: #8a5a00;
-    font-weight: 600;
 }
 
 /* Shown when the pictograms do not match the hazard statements (CLP). */

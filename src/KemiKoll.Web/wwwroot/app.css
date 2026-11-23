@@ -127,27 +127,6 @@ h1:focus {
     padding-left: 1.2rem;
 }
 
-.search {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.search input {
-    width: 100%;
-    max-width: 28rem;
-    padding: 0.45rem 0.6rem;
-    border: 1px solid #bbb;
-    border-radius: 4px;
-    font-size: 1rem;
-}
-
-.search small {
-    color: #555;
-    white-space: nowrap;
-}
-
 .product-form .duplicate {
     margin-bottom: 1rem;
     padding: 0.75rem 1rem;

@@ -6,7 +6,7 @@ public class ProductSearchTests
 {
     private static ProductSummary Product(string name, string supplier, params string[] hazardCodes) =>
         new(Guid.NewGuid(), name, supplier, hazardCodes, ["GHS02"], hazardCodes.Length > 0,
-            DataSheetStatus.Missing, null, [], []);
+            hazardCodes.Length > 0 ? DataSheetStatus.Missing : DataSheetStatus.NotRequired, null, [], []);
 
     private static readonly ProductSummary Bensin = Product("Aspen 4T Bensin", "Lantmännen Aspen AB", "H224", "H304");
     private static readonly ProductSummary Degreaser = Product("Avfettning Plus", "Kemetyl AB", "H315");
@@ -47,4 +47,29 @@ public class ProductSearchTests
 
     [Fact]
     public void Filter_NoMatch_ReturnsEmpty() => AssertFinds("aceton");
+
+    [Fact]
+    public void Filter_NeedsAttention_MissingOrDueForReview()
+    {
+        var dueForReview = Oil with { DataSheetStatus = DataSheetStatus.DueForReview };
+        var upToDate = Degreaser with { DataSheetStatus = DataSheetStatus.UpToDate };
+        IReadOnlyList<ProductSummary> products = [Bensin, upToDate, dueForReview];
+
+        ProductSummary[] expected = [Bensin, dueForReview];
+        Assert.Equal(expected, ProductSearch.Filter(products, null, ProductFilter.NeedsAttention));
+    }
+
+    [Fact]
+    public void Filter_Hazardous()
+    {
+        ProductSummary[] expected = [Bensin, Degreaser];
+        Assert.Equal(expected, ProductSearch.Filter(All, "", ProductFilter.Hazardous));
+    }
+
+    [Fact]
+    public void Filter_QuickFilterAndText_BothMustMatch()
+    {
+        ProductSummary[] expected = [Degreaser];
+        Assert.Equal(expected, ProductSearch.Filter(All, "kemetyl", ProductFilter.Hazardous));
+    }
 }

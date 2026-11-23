@@ -16,6 +16,7 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - **Edit and delete products**: "Edit" link in the product list, edit page with the same form and CLP check, delete with confirmation (data sheets are deleted too).
 - **Data sheets on the edit page**: list (newest first, older kept as history), correct revision date and language, remove with confirmation, add a newer version by uploading its PDF — with an offer to take over its H-codes and pictograms when they differ.
 
+- Quick filters above the product list (All, Needs attention, Hazardous) with counts; they replace the summary line and work together with the search box.
 - Search box above the product list: filters by name, supplier, hazard code or pictogram code while typing; several words must all match.
 - Duplicate warning when adding a product with the same name and supplier as an existing one, with a link to it and a "Save anyway" button.
 - Startup check of the database: if it cannot be reached or is missing migrations, the app stops with one clear message and the fix (instead of a long error on the first page).
