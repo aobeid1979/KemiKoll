@@ -127,4 +127,54 @@ public class AddProductTests
         Assert.Empty(_repository.Products);
         Assert.Empty(_sheets.Sheets);
     }
+
+    [Fact]
+    public async Task ExecuteAsync_SameNameAndSupplier_ReturnsDuplicateAndSavesNothing()
+    {
+        var first = await _addProduct.ExecuteAsync(Command());
+
+        var second = await _addProduct.ExecuteAsync(
+            Command(name: "  degreaser x ", supplier: "ACME KEMI AB") with
+            { DataSheet = new NewDataSheet(new DateOnly(2025, 1, 1), "sv", "x.pdf") });
+
+        Assert.False(second.Succeeded);
+        Assert.True(second.IsDuplicate);
+        Assert.Equal(first.ProductId, second.DuplicateOfProductId);
+        Assert.Empty(second.Errors);
+        Assert.Single(_repository.Products);
+        Assert.Empty(_sheets.Sheets);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SameNameAndSupplier_AllowDuplicate_SavesSecondProduct()
+    {
+        await _addProduct.ExecuteAsync(Command());
+
+        var second = await _addProduct.ExecuteAsync(Command() with { AllowDuplicate = true });
+
+        Assert.True(second.Succeeded);
+        Assert.Equal(2, _repository.Products.Count);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_SameNameOtherSupplier_IsNotDuplicate()
+    {
+        await _addProduct.ExecuteAsync(Command());
+
+        var second = await _addProduct.ExecuteAsync(Command(supplier: "Other Kemi AB"));
+
+        Assert.True(second.Succeeded);
+        Assert.False(second.IsDuplicate);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_InvalidInput_ReportsErrorsBeforeDuplicateCheck()
+    {
+        await _addProduct.ExecuteAsync(Command());
+
+        var second = await _addProduct.ExecuteAsync(Command(hazardCodes: ["P210"]));
+
+        Assert.False(second.IsDuplicate);
+        Assert.NotEmpty(second.Errors);
+    }
 }
