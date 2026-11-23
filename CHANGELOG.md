@@ -16,6 +16,8 @@ and the project uses [Semantic Versioning](https://semver.org/).
 - **Edit and delete products**: "Edit" link in the product list, edit page with the same form and CLP check, delete with confirmation (data sheets are deleted too).
 - **Data sheets on the edit page**: list (newest first, older kept as history), correct revision date and language, remove with confirmation, add a newer version by uploading its PDF — with an offer to take over its H-codes and pictograms when they differ.
 
+- Startup check of the database: if it cannot be reached or is missing migrations, the app stops with one clear message and the fix (instead of a long error on the first page).
+
 ### Changed
 - `AddProduct` can save a data sheet together with the product; the data sheet is validated before anything is saved.
 - The product fields and the pictogram check are a shared component (`ProductFormFields`), used by the Add and Edit pages.
