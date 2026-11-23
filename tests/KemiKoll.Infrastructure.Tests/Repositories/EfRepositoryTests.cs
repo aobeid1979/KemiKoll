@@ -17,6 +17,10 @@ public sealed class EfRepositoryTests(PostgreSqlFixture database) : IAsyncLifeti
     private readonly EfProductRepository _products = new(database.ContextFactory);
     private readonly EfSafetyDataSheetRepository _sheets = new(database.ContextFactory);
 
+    // Whole seconds in UTC: PostgreSQL stores microseconds, so these survive the round trip exactly.
+    private static readonly DateTimeOffset Added = new(2026, 11, 21, 9, 30, 0, TimeSpan.Zero);
+    private static readonly DateTimeOffset Changed = new(2026, 11, 23, 11, 15, 0, TimeSpan.Zero);
+
     public Task InitializeAsync() => database.ResetAsync();
 
     public Task DisposeAsync() => Task.CompletedTask;
@@ -27,7 +31,8 @@ public sealed class EfRepositoryTests(PostgreSqlFixture database) : IAsyncLifeti
         var product = ChemicalProduct.Create(
             "Brake cleaner",
             "Verkstadsprodukter AB",
-            [HazardStatement.Parse("H225"), HazardStatement.Parse("H360Fd"), HazardStatement.Parse("EUH066")]);
+            [HazardStatement.Parse("H225"), HazardStatement.Parse("H360Fd"), HazardStatement.Parse("EUH066")],
+            Added);
         product.AddPictogram(Pictogram.Flame);
         product.AddPictogram(Pictogram.HealthHazard);
 
@@ -40,6 +45,8 @@ public sealed class EfRepositoryTests(PostgreSqlFixture database) : IAsyncLifeti
         Assert.Equal(product.HazardStatements, loaded.HazardStatements);
         Assert.Equal(product.Pictograms, loaded.Pictograms);
         Assert.True(loaded.IsHazardous);
+        Assert.Equal(Added, loaded.AddedAt);
+        Assert.Equal(Added, loaded.LastChangedAt);
     }
 
     [Fact]
@@ -111,13 +118,13 @@ public sealed class EfRepositoryTests(PostgreSqlFixture database) : IAsyncLifeti
     [Fact]
     public async Task UpdateAsync_SavesAllChangedValuesIncludingLists()
     {
-        var product = ChemicalProduct.Create("Ethanol", "Amfo Company", [HazardStatement.Parse("H225")]);
+        var product = ChemicalProduct.Create("Ethanol", "Amfo Company", [HazardStatement.Parse("H225")], Added);
         product.AddPictogram(Pictogram.FlameOverCircle);
         await _products.AddAsync(product);
 
         // Edit the way the app does: load, change, save.
         var loaded = (await _products.GetAsync(product.Id))!;
-        loaded.Update("Ethanol absolute", "Reagent Chemical Services", [HazardStatement.Parse("H225"), HazardStatement.Parse("H319")], [Pictogram.Flame, Pictogram.ExclamationMark]);
+        loaded.Update("Ethanol absolute", "Reagent Chemical Services", [HazardStatement.Parse("H225"), HazardStatement.Parse("H319")], [Pictogram.Flame, Pictogram.ExclamationMark], Changed);
         var saved = await _products.UpdateAsync(loaded);
 
         var reloaded = (await _products.GetAsync(product.Id))!;
@@ -126,6 +133,8 @@ public sealed class EfRepositoryTests(PostgreSqlFixture database) : IAsyncLifeti
         Assert.Equal("Reagent Chemical Services", reloaded.Supplier);
         Assert.Equal(loaded.HazardStatements, reloaded.HazardStatements);
         Assert.Equal(loaded.Pictograms, reloaded.Pictograms);
+        Assert.Equal(Added, reloaded.AddedAt);
+        Assert.Equal(Changed, reloaded.LastChangedAt);
     }
 
     [Fact]
@@ -135,7 +144,7 @@ public sealed class EfRepositoryTests(PostgreSqlFixture database) : IAsyncLifeti
         await _products.AddAsync(product);
         await _products.DeleteAsync(product.Id);
 
-        product.Update("Acetone 2", "Exempel Kemi AB", [], []);
+        product.Update("Acetone 2", "Exempel Kemi AB", [], [], Changed);
         var saved = await _products.UpdateAsync(product);
 
         Assert.False(saved);
